@@ -1,0 +1,13 @@
+package client
+
+var publicKeyPEM = `
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzptPy+eQAuAsHLWEBqx2
+oVUuu55iHkYSMFhxzCt0i1vZUo3e5jyIhjd8DJ2B3b5/ejQSL9bGaOSUYF0ztMHs
+B8ZUoItjewpWqPIdrx+Z6n+CwJdaqutAkrwu+26yk+VarawZ9LCzqIGODwFaTd/3
+6FbfxySnvF7cysElur3XwJE9rLWxnur0AJt2C19xNxLNKfdc6T6zUVBszJdQy2Am
+0s8cpLigtRGxIJIFXw8gxNgjy3mG1UrPD5eUnLJwgh9J+ws79lOL4JcjEGeNQDCe
+ymRxXtSIfQIYOeujhr3UliEDOUrYbeZgh7oetyC2YCDrpOSJdZuGFTefSCjGTYJe
+bQIDAQAB
+-----END PUBLIC KEY-----
+`
