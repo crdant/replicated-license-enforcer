@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/crdant/replicated-license-enforcer/pkg/client"
+	"github.com/crdant/replicated-license-enforcer/pkg/events"
 	"github.com/crdant/replicated-license-enforcer/pkg/version"
 
 	backoff "github.com/cenkalti/backoff/v4"
@@ -19,6 +20,12 @@ func checkLicense(client client.ExpirationClient) error {
 	}
 
 	if expiration.Before(time.Now()) {
+    client, err := events.NewKubernetesEventClient()
+    if err != nil {
+      return nil
+    } 
+
+    client.CreateExpiredEvent("slackernews", expiration)
 		return errors.New("License is expired")
 	}
 
@@ -42,7 +49,6 @@ func main() {
 
 	err := backoff.Retry(check, backoff.NewExponentialBackOff())
 	if err != nil {
-
 		os.Exit(1)
 	}
 

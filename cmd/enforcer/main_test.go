@@ -29,9 +29,9 @@ func TestLicenseCheckValidLicense(t *testing.T) {
 
 
 func TestLicenseCheckExpriredLicense(t *testing.T) {
-    future := time.Now().Add(-24 * time.Hour)
+    past := time.Now().Add(-24 * time.Hour)
     mockClient := new(MockAPIClient)
-    mockClient.On("GetExpirationDate", mock.Anything).Return(future, nil)
+    mockClient.On("GetExpirationDate", mock.Anything).Return(past, nil)
 
     err := checkLicense(mockClient)
     if err == nil {
