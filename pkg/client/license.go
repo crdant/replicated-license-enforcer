@@ -13,10 +13,6 @@ import (
     license "github.com/replicatedhq/replicated-sdk/pkg/license/types"
 )
 
-type ExpirationClient interface {
-  GetExpirationDate() (time.Time, error) 
-}
-
 // Return the expiration date for the license as a date field since it's
 // a special case of the fields in the license
 func (c *Client) GetExpirationDate() (time.Time, error) {

@@ -13,7 +13,7 @@ import (
 	backoff "github.com/cenkalti/backoff/v4"
 )
 
-func checkLicense(client client.ExpirationClient) (bool, error) {
+func checkLicense(client client.ReplicatedClient) (bool, error) {
 	expiration, err := client.GetExpirationDate()
 	if err != nil {
 		return false, err

@@ -26,3 +26,9 @@ func (c *Client) makeRequest(method, url string, body io.Reader) (*http.Response
     }
     return c.HTTPClient.Do(req)
 }
+
+type ReplicatedClient interface {
+  GetAppName() (string, error)
+  GetAppSlug() (string, error)
+  GetExpirationDate() (time.Time, error) 
+}

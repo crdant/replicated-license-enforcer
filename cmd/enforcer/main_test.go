@@ -16,6 +16,16 @@ func (m *MockAPIClient) GetExpirationDate() (time.Time, error) {
     return args.Get(0).(time.Time), args.Error(1)
 }
 
+func (m *MockAPIClient) GetAppName() (string, error) {
+    args := m.Called()
+    return args.Get(0).(string), args.Error(1)
+}
+
+func (m *MockAPIClient) GetAppSlug() (string, error) {
+    args := m.Called()
+    return args.Get(0).(string), args.Error(1)
+}
+
 func TestLicenseCheckValidLicense(t *testing.T) {
     future := time.Now().Add(24 * time.Hour)
     mockClient := new(MockAPIClient)
