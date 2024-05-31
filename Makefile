@@ -1,9 +1,11 @@
+include Makefile.build.mk
+
 .PHONY: test
 test: 
 	go test -v $(TEST_BUILDFLAGS) ./pkg/... ./cmd/... -coverprofile cover.out
 
 .PHONY: build
-build:
+build: vet test
 	go build ${LDFLAGS} ${GCFLAGS} -v -o bin/enforcer $(BUILDFLAGS) ./cmd/enforcer
 
 .PHONY: fmt
