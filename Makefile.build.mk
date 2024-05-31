@@ -1,3 +1,6 @@
+export GOPROXY=https://proxy.golang.org
+export CGO_ENABLED=0
+
 SHELL := /bin/bash -o pipefail
 VERSION_PACKAGE = github.com/crdant/replicated-license-enforcer/pkg/version
 VERSION?=$(if $(GIT_TAG),$(GIT_TAG),alpha)
@@ -41,3 +44,6 @@ define LDFLAGS
 "
 endef
 endif
+
+BUILDFLAGS = -tags='netgo containers_image_ostree_stub exclude_graphdriver_devicemapper exclude_graphdriver_btrfs containers_image_openpgp' -installsuffix netgo
+TEST_BUILDFLAGS = -tags='testing netgo containers_image_ostree_stub exclude_graphdriver_devicemapper exclude_graphdriver_btrfs containers_image_openpgp' -installsuffix netgo
