@@ -13,37 +13,47 @@ import (
 	backoff "github.com/cenkalti/backoff/v4"
 )
 
-func checkLicense(client client.ExpirationClient) error {
+func checkLicense(client client.ExpirationClient) (bool, error) {
 	expiration, err := client.GetExpirationDate()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if expiration.Before(time.Now()) {
-    client, err := events.NewKubernetesEventClient()
-    if err != nil {
-      return nil
-    } 
-
-    client.CreateExpiredEvent("slackernews", expiration)
-		return errors.New("License is expired")
+    return false, nil
 	}
 
-	return nil
+	return true, nil
 }
 
 func main() {
 	endpoint := os.Getenv("REPLICATED_SDK_ENDPOINT")
 	sdkClient := client.NewClient(endpoint)
   
-  fmt.Printf("Version: %s, Build Time: %s, GitCommit: %s\n", version.Version, version.BuildTime, version.GitSHA)
+  fmt.Printf("Version: %s, Build Time: %s, GitCommit: %s", version.Version, version.BuildTime, version.GitSHA)
 
 	check := func() error {
-		err := checkLicense(sdkClient)
+		valid, err := checkLicense(sdkClient)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return err
 		}
+    if !valid {
+      k8sClient, err := events.NewKubernetesEventClient()
+      if err != nil {
+        fmt.Fprintln(os.Stderr, "License is expired.")
+        fmt.Fprintln(os.Stderr, "Error sending license expired event to Kubernetes.") 
+        return err
+      }
+      expiration, err := sdkClient.GetExpirationDate()
+      if err != nil {
+        fmt.Fprintln(os.Stderr, "License is expired.")
+        fmt.Fprintln(os.Stderr, "Error finding expiration date to incldue in kubernetes event") 
+        return err
+      }
+      k8sClient.CreateExpiredEvent("slackernews", expiration)
+      return errors.New("License is expired") 
+    }
 		return nil
 	}
 

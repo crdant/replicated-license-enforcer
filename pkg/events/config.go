@@ -2,7 +2,6 @@ package events
 
 import (
     "os"
-    "fmt"
     "path/filepath"
 
   	"k8s.io/client-go/util/homedir"
@@ -27,10 +26,8 @@ func GetPathToKubeConfig() string {
 
 func GetKubernetesConfig() (*rest.Config, error) {
   if isRunningInCluster() {
-    fmt.Println("Running in cluster")
     return rest.InClusterConfig()
   } else {
-    fmt.Println("Running outside cluster")
 	  return clientcmd.BuildConfigFromFlags("", GetPathToKubeConfig())
   }  
 }
