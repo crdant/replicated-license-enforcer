@@ -1,0 +1,112 @@
+name: Build and sign image
+
+on:
+  push:
+  pull_request:
+
+env:
+  REGISTRY: ghcr.io
+ 
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'  # Specify the Go version
+
+    - name: Format Code
+      run: make fmt
+
+    - name: Vet Code
+      run: make vet
+
+    - name: Run Tests
+      run: make test
+
+    - name: Build
+      run: make build
+
+  build-image:
+    runs-on: ubuntu-22.04
+    needs:
+      - build-and-test
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for image image
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          tags: |
+                type=sha,format=long
+                type=schedule
+                type=raw,${{ inputs.version }}
+                type=ref,event=branch
+                type=ref,event=tag
+                type=ref,event=pr
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer
+
+      - uses: int128/docker-build-cache-config-action@v1
+        id: cache
+        with:
+          image: ghcr.io/${{ github.repository }}/cache
+
+      - name: Build enforcer image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          file: ./deployment/Dockerfile
+          push: true
+          cache-from: ${{ steps.cache.outputs.cache-from }}
+          cache-to: ${{ steps.cache.outputs.cache-to }}
+
+
+  sign-image:
+    runs-on: ubuntu-22.04
+    needs:
+      - build-image
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    outputs:
+      signature: ${{ steps.sign-image.outputs.signature }}
+    steps:
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.3.0
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sign the image
+        id: sign-image
+        run: |
+          cosign sign ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.build-image.outputs.digest }} --yes
+          echo "signature=$(cosign triangulate ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.build.outputs.web-digest }})" >> $GITHUB_OUTPUT
+
