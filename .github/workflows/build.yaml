@@ -11,11 +11,11 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
-        go-version: '1.16'  # Specify the Go version
+        go-version: '1.22'  # Specify the Go version
 
     - name: Format Code
       run: make fmt
@@ -107,6 +107,6 @@ jobs:
       - name: Sign the image
         id: sign-image
         run: |
-          cosign sign ${{ env.REGISTRY }}/${{ github.repository_owner }}/slackernews-web@${{ needs.build-image.outputs.digest }} --yes
-          echo "signature=$(cosign triangulate ${{ env.REGISTRY }}/${{ github.repository_owner }}/slackernews-web@${{ needs.build.outputs.web-digest }})" >> $GITHUB_OUTPUT
+          cosign sign ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.build-image.outputs.digest }} --yes
+          echo "signature=$(cosign triangulate ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.build.outputs.web-digest }})" >> $GITHUB_OUTPUT
 
