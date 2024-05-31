@@ -55,6 +55,8 @@ jobs:
 
   build-image:
     runs-on: ubuntu-22.04
+    needs:
+      - build-and-test
     permissions:
       contents: read
       packages: write
