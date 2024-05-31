@@ -23,14 +23,13 @@ ENV GIT_TAG=${git_tag}
 
 RUN --mount=type=cache,target=${GOMODCACHE} \
     --mount=type=cache,target=${GOCACHE} \
-    make build && mv ./bin/replicated /replicated
+    make build && mv ./bin/enforcer /enforcer
 
 FROM cgr.dev/chainguard/static:latest
 
-COPY --from=builder /replicated /replicated
+COPY --from=builder /enforcer /enforcer
 
 WORKDIR /
 
 EXPOSE 3000
-ENTRYPOINT ["/replicated"]
-CMD ["api"]
+ENTRYPOINT ["/enforcer"]
