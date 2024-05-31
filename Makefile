@@ -5,7 +5,7 @@ test:
 	go test -v $(TEST_BUILDFLAGS) ./pkg/... ./cmd/... -coverprofile cover.out
 
 .PHONY: build
-build: vet test
+build: 
 	go build ${LDFLAGS} ${GCFLAGS} -v -o bin/enforcer $(BUILDFLAGS) ./cmd/enforcer
 
 .PHONY: fmt
