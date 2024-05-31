@@ -3,30 +3,6 @@ name: CI
 on:
   push:
   pull_request:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: Branch
-        required: true
-        default: main
-        type: string
-      namespace:
-        description: Registry Namespace
-        required: true
-        type: string
-      slug:
-        description: Replicated App Slug
-        required: true
-        type: string
-      version:
-        description: Release Version
-        required: true
-        type: string
-      proxy:
-        description: Proxy Image Registry
-        required: true
-        default: proxy.replicated.com
-        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -77,7 +53,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for web image
+      - name: Extract metadata (tags, labels) for image image
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -88,7 +64,7 @@ jobs:
                 type=ref,event=branch
                 type=ref,event=tag
                 type=ref,event=pr
-          images: ${{ env.REGISTRY }}/${{ inputs.namespace }}/slackernews-web
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer
 
       - uses: int128/docker-build-cache-config-action@v1
         id: cache
@@ -131,6 +107,6 @@ jobs:
       - name: Sign the image
         id: sign-image
         run: |
-          cosign sign ${{ env.REGISTRY }}/${{ inputs.namespace }}/slackernews-web@${{ needs.build-image.outputs.digest }} --yes
-          echo "signature=$(cosign triangulate ${{ env.REGISTRY }}/${{ inputs.namespace }}/slackernews-web@${{ needs.build.outputs.web-digest }})" >> $GITHUB_OUTPUT
+          cosign sign ${{ env.REGISTRY }}/${{ github.repository_owner }}/slackernews-web@${{ needs.build-image.outputs.digest }} --yes
+          echo "signature=$(cosign triangulate ${{ env.REGISTRY }}/${{ github.repository_owner }}/slackernews-web@${{ needs.build.outputs.web-digest }})" >> $GITHUB_OUTPUT
 
