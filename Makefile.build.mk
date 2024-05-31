@@ -26,9 +26,9 @@ endif
 ifeq ("$(DEBUG_REPLICATED)", "1")
 define LDFLAGS
 -ldflags "\
-	-X ${VERSION_PACKAGE}.version=${VERSION} \
-	-X ${VERSION_PACKAGE}.gitSHA=${GIT_SHA} \
-	-X ${VERSION_PACKAGE}.buildTime=${DATE} \
+	-X ${VERSION_PACKAGE}.Version=${VERSION} \
+	-X ${VERSION_PACKAGE}.GitSHA=${GIT_SHA} \
+	-X ${VERSION_PACKAGE}.BuildTime=${DATE} \
 "
 endef
 define GCFLAGS
@@ -38,9 +38,9 @@ else
 define LDFLAGS
 -ldflags "\
 	-s -w \
-	-X ${VERSION_PACKAGE}.version=${VERSION} \
-	-X ${VERSION_PACKAGE}.gitSHA=${GIT_SHA} \
-	-X ${VERSION_PACKAGE}.buildTime=${DATE} \
+	-X ${VERSION_PACKAGE}.Version=${VERSION} \
+	-X ${VERSION_PACKAGE}.GitSHA=${GIT_SHA} \
+	-X ${VERSION_PACKAGE}.BuildTime=${DATE} \
 "
 endef
 endif
