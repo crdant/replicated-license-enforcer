@@ -4,29 +4,29 @@ on:
   - push
   - pull_request
   - workflow_dispatch:
-    inputs:
-      branch:
-        description: Branch
-        required: true
-        default: main
-        type: string
-      namespace:
-        description: Registry Namespace
-        required: true
-        type: string
-      slug:
-        description: Replicated App Slug
-        required: true
-        type: string
-      version:
-        description: Release Version
-        required: true
-        type: string
-      proxy:
-        description: Proxy Image Registry
-        required: true
-        default: proxy.replicated.com
-        type: string
+      inputs:
+        branch:
+          description: Branch
+          required: true
+          default: main
+          type: string
+        namespace:
+          description: Registry Namespace
+          required: true
+          type: string
+        slug:
+          description: Replicated App Slug
+          required: true
+          type: string
+        version:
+          description: Release Version
+          required: true
+          type: string
+        proxy:
+          description: Proxy Image Registry
+          required: true
+          default: proxy.replicated.com
+          type: string
 
 env:
   REGISTRY: ghcr.io
