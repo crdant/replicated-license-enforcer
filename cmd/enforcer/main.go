@@ -51,8 +51,12 @@ func main() {
         fmt.Fprintln(os.Stderr, "Error finding expiration date to incldue in kubernetes event") 
         return err
       }
-      k8sClient.CreateExpiredEvent("slackernews", expiration)
-      return errors.New("License is expired") 
+
+      name, _ := sdkClient.GetAppName()
+      slug, _ := sdkClient.GetAppSlug()
+      k8sClient.CreateExpiredEvent(slug, expiration)
+      fmt.Fprintln(os.Stderr, fmt.Sprintf("License for %s is expired", name))
+      return errors.New(fmt.Sprintf("License for %s is expired", name))
     }
 		return nil
 	}
