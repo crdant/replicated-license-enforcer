@@ -108,7 +108,7 @@ func main() {
     }
     go c.Start()
 
-    sig := make(chan os.Signal)
+    sig := make(chan os.Signal, 1)
     signal.Notify(sig, os.Interrupt, os.Kill)
     <-sig
   }
