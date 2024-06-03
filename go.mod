@@ -112,6 +112,7 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/replicatedhq/kotskinds v0.0.0-20230724164735-f83482cc9cfe // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rubenv/sql-migrate v1.5.2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect

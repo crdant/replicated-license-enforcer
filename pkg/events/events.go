@@ -61,8 +61,11 @@ func PrepareLicenseEvent(client EventClient, valid bool, application string, dat
     return nil, err
   }
   if event != nil {
-    log.Debug("Event already exists, incrementing count", "previous", event.Count)
-    event.Count++
+    log.Debug("Event already exists")
+    if !valid {
+      log.Debug("Invalid event, incrementing count", "previous", event.Count)
+      event.Count++
+    }
     return event, nil
   }
 
