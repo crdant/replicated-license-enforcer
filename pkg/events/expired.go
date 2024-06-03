@@ -16,7 +16,7 @@ func PrepareExpiredEvent(client EventClient, application string, date time.Time)
     return nil, err
   }
   if event != nil {
-    event.Count += 1
+    event.Count++
     return event, nil
   }
 
@@ -44,12 +44,9 @@ func (c *KubernetesEventClient) GetExpiredEvent(application string, date time.Ti
     }
     events, err := c.Clientset.CoreV1().Events(podRef.Namespace).List(context.TODO(), listOptions)
     if err != nil {
-        fmt.Println("Error getting events: ", err)
         return nil, err
     }
     if len(events.Items) > 0 {
-        // Return the most recent event
-        fmt.Println("Returning most recent event")
         return &events.Items[len(events.Items)-1], nil
     }
     return nil, nil
@@ -62,8 +59,11 @@ func (c *KubernetesEventClient) CreateExpiredEvent(application string, date time
       return nil
     }
 
-    if _, err := c.Clientset.CoreV1().Events(event.ObjectMeta.Namespace).Create(context.TODO(), event, metav1.CreateOptions{}); err != nil {
-        return err
+    if event.Count > 1 {
+      _, err := c.Clientset.CoreV1().Events(event.ObjectMeta.Namespace).Update(context.TODO(), event, metav1.UpdateOptions{});
+      return err
     }
-    return nil
+
+    _, err = c.Clientset.CoreV1().Events(event.ObjectMeta.Namespace).Create(context.TODO(), event, metav1.CreateOptions{});
+    return err
 }

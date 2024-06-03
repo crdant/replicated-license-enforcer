@@ -30,7 +30,7 @@ func main() {
 	endpoint := os.Getenv("REPLICATED_SDK_ENDPOINT")
 	sdkClient := client.NewClient(endpoint)
   
-  fmt.Printf("Version: %s, Build Time: %s, GitCommit: %s", version.Version, version.BuildTime, version.GitSHA)
+  fmt.Printf("Version: %s, Build Time: %s, GitCommit: %s\n", version.Version, version.BuildTime, version.GitSHA)
 
 	check := func() error {
 		valid, err := checkLicense(sdkClient)
