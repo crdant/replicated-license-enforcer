@@ -10,6 +10,7 @@ import (
 )
 
 type EventClient interface {
+    GetExpiredEvent(application string, date time.Time) (*v1.Event, error)
     CreateExpiredEvent(application string, date time.Time) error
     CreateValidEvent(application string, date time.Time) error
 }
