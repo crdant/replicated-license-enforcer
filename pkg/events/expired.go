@@ -44,10 +44,12 @@ func (c *KubernetesEventClient) GetExpiredEvent(application string, date time.Ti
     }
     events, err := c.Clientset.CoreV1().Events(podRef.Namespace).List(context.TODO(), listOptions)
     if err != nil {
+        fmt.Println("Error getting events: ", err)
         return nil, err
     }
     if len(events.Items) > 0 {
         // Return the most recent event
+        fmt.Println("Returning most recent event")
         return &events.Items[len(events.Items)-1], nil
     }
     return nil, nil
