@@ -20,7 +20,11 @@ func setupMockEnvironment() {
 }
 
 func generateEventKey(valid bool, application string, date time.Time) string {
-    return fmt.Sprintf("%t-%s-%s", valid, application, date.Format(time.RFC3339))
+    reason := "Valid"
+    if !valid {
+      reason = "Expired"
+    }
+    return fmt.Sprintf("%s-%s-%s", reason, application, date.Format(time.RFC3339))
 }
 
 func NewMockEventClient() *MockEventClient {

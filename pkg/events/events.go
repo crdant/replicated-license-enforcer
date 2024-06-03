@@ -81,6 +81,10 @@ func PrepareLicenseEvent(client EventClient, valid bool, application string, dat
     ObjectMeta: metav1.ObjectMeta{
       GenerateName: fmt.Sprintf("%s.", strings.ToLower(application)),
       Namespace:   podRef.Namespace,
+      Annotations: map[string]string{
+        "application": application,
+        "expiration": date.Format(time.RFC3339),
+      },
     },
     Type:    eventType,
     Reason:  reason,
