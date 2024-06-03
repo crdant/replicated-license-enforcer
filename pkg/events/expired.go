@@ -52,7 +52,7 @@ func (c *KubernetesEventClient) GetExpiredEvent(application string, date time.Ti
         return nil, err
     }
     if len(events.Items) > 0 {
-        log.Debug("Found events", "count", len(events.Items))
+        log.Debug("Found events", "events_created", len(events.Items))
         return &events.Items[len(events.Items)-1], nil
     }
     return nil, nil

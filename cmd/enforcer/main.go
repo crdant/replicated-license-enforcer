@@ -28,6 +28,7 @@ func checkLicense(client client.ReplicatedClient) (bool, error) {
 }
 
 func main() {
+  log.SetLevel(log.DebugLevel)
 	endpoint := os.Getenv("REPLICATED_SDK_ENDPOINT")
 	sdkClient := client.NewClient(endpoint)
   
@@ -40,7 +41,7 @@ func main() {
 			return err
 		}
     if !valid {
-      log.Info("License is expired.")
+      log.Debug("License is expired, fetching details and creating event")
       k8sClient, err := events.NewKubernetesEventClient()
       if err != nil {
         log.Error("Could not create Kuberenetes client", "error", err)
@@ -55,7 +56,7 @@ func main() {
       name, _ := sdkClient.GetAppName()
       slug, _ := sdkClient.GetAppSlug()
       k8sClient.CreateExpiredEvent(slug, expiration)
-      log.Info("License for %s is expired", name)
+      log.Infof("License for %s is expired", name)
       return errors.New(fmt.Sprintf("License for %s is expired", name))
     }
 		return nil
