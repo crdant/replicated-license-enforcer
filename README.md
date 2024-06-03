@@ -14,7 +14,7 @@ on distribution and installation. I think that makes sense, since we're not
 sure how you might want to respond when the license isn't valid. Instead, we
 give you the tools you need to write your own enforcement code. The
 [Replicated SDK](https://docs.replicated.com/reference/replicated-sdk-apis)
-gives you access to the license and all its fields. You can easily write field
+gives you access to the license and all its fields. You can easily write cod3
 to access the expiration date and any of your own entitlements. 
 
 But something kept gnawing at me. Was there a way I could create something
