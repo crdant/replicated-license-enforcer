@@ -27,7 +27,7 @@ inspiration. Turns out, there was something I could do.
 
 ### As an init container
 
-You can use this code. The most direct way is to add an init container to
+The most direct way to use this code is to add an init container to
 one or more workloads in your application that uses my image directly. The
 init container will stop your pod from running until the Replicated license is
 valid. 
@@ -70,11 +70,56 @@ A couple of things to be aware of:
    want to create your a service account and assign it an appropriate role.
    See [`examples/rbac.yaml`](./examples/rbac.yaml).
 
+### As a sidecar
+
+The init container approach is nice because it stops the pod from running
+without a valid license. It's constrained, though. Once the pod is running the
+license isn't checked again until it restarts. What happens if the license
+expires between restarts?
+
+Running the container as a sidecar addresses this scenario. The sidecar will
+not stop other containers in the pod, but it will record Kubernetes events to
+show the license is no longer valid. Valid license checks will not emit new
+events unless the expiration date has changed, and the code will not check
+again until a set duration has passed. You set the duration with the
+`--recheck` flag passed to the `enforcer` command.
+
+Use the following to run as a sidecar:
+
+```
+initContainers:
+- name: license-check
+  image: ghcr.io/crdant/replicated-license-enforcer:latest
+  command: [ "/enforcer" ]
+  args: ["--recheck", "4h" ]    # any valid Go duration
+  env:
+    - name: REPLICATED_SDK_ENDPOINT
+      value: http://replicated:3000
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.namespace
+    - name: POD_UID
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.uid
+  imagePullPolicy: IfNotPresent
+```
+
 ### In your own code
 
 There are a couple of useful packages you can take advantage of if you'd
 rather incorporate enforcement into your own code. You can use the `client`
-package as a lightweight client for the needed parts of the Replicated SDK
+package as a lightweight client for the needed parts of the Replicated SDK and
+the `event` package to record license events.
+
 ## Limitations
 
 1. This code is provided _AS IS_ and is not supported by Replicated.
