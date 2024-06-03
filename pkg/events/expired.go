@@ -5,6 +5,8 @@ import (
     "strings"
     "time"
     "context"
+    
+    "github.com/charmbracelet/log"
 
     v1 "k8s.io/api/core/v1"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,9 +15,11 @@ import (
 func PrepareExpiredEvent(client EventClient, application string, date time.Time) (*v1.Event, error) {
   event, err := client.GetExpiredEvent(application, date)
   if err != nil {
+    log.Error("Error getting existing event", "error", err)
     return nil, err
   }
   if event != nil {
+    log.Debug("Event already exists, incrementing count", "previous",)
     event.Count++
     return event, nil
   }
@@ -44,9 +48,11 @@ func (c *KubernetesEventClient) GetExpiredEvent(application string, date time.Ti
     }
     events, err := c.Clientset.CoreV1().Events(podRef.Namespace).List(context.TODO(), listOptions)
     if err != nil {
+        log.Error("Error getting events from Kubernertes", "error", err)
         return nil, err
     }
     if len(events.Items) > 0 {
+        log.Debug("Found events", "count", len(events.Items))
         return &events.Items[len(events.Items)-1], nil
     }
     return nil, nil
@@ -56,10 +62,12 @@ func (c *KubernetesEventClient) GetExpiredEvent(application string, date time.Ti
 func (c *KubernetesEventClient) CreateExpiredEvent(application string, date time.Time) error {
     event, err := PrepareExpiredEvent(c, application, date)
     if err != nil {
+      log.Error("Error preparing Kubernetes event", "error", err)
       return nil
     }
 
     if event.Count > 1 {
+      log.Debug("Updating existing event", "count", event.Count)
       _, err := c.Clientset.CoreV1().Events(event.ObjectMeta.Namespace).Update(context.TODO(), event, metav1.UpdateOptions{});
       return err
     }

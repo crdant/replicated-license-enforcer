@@ -10,6 +10,7 @@ import (
 	"github.com/crdant/replicated-license-enforcer/pkg/events"
 	"github.com/crdant/replicated-license-enforcer/pkg/version"
 
+  "github.com/charmbracelet/log"
 	backoff "github.com/cenkalti/backoff/v4"
 )
 
@@ -35,27 +36,26 @@ func main() {
 	check := func() error {
 		valid, err := checkLicense(sdkClient)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			log.Error("checking license", "error", err)
 			return err
 		}
     if !valid {
+      log.Info("License is expired.")
       k8sClient, err := events.NewKubernetesEventClient()
       if err != nil {
-        fmt.Fprintln(os.Stderr, "License is expired.")
-        fmt.Fprintln(os.Stderr, "Error sending license expired event to Kubernetes.") 
+        log.Error("Could not create Kuberenetes client", "error", err)
         return err
       }
       expiration, err := sdkClient.GetExpirationDate()
       if err != nil {
-        fmt.Fprintln(os.Stderr, "License is expired.")
-        fmt.Fprintln(os.Stderr, "Error finding expiration date to incldue in kubernetes event") 
+        log.Error("Error finding expiration date to incldue in kubernetes event", "error", err)
         return err
       }
 
       name, _ := sdkClient.GetAppName()
       slug, _ := sdkClient.GetAppSlug()
       k8sClient.CreateExpiredEvent(slug, expiration)
-      fmt.Fprintln(os.Stderr, fmt.Sprintf("License for %s is expired", name))
+      log.Info("License for %s is expired", name)
       return errors.New(fmt.Sprintf("License for %s is expired", name))
     }
 		return nil
@@ -66,6 +66,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Fprintln(os.Stdout, "License is valid.")
+	log.Info("License is valid")
 	os.Exit(0)
 }
