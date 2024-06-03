@@ -35,13 +35,13 @@ func main() {
   fmt.Printf("Version: %s, Build Time: %s, GitCommit: %s\n", version.Version, version.BuildTime, version.GitSHA)
 
 	check := func() error {
-		valid, err := checkLicense(sdkClient)
-		if err != nil {
-			log.Error("checking license", "error", err)
-			return err
-		}
-    if !valid {
-      log.Debug("License is expired, fetching details and creating event")
+      valid, err := checkLicense(sdkClient)
+      if err != nil {
+        log.Error("checking license", "error", err)
+        return err
+      }
+      log.Debug("Fetching license details and creating event")
+
       k8sClient, err := events.NewKubernetesEventClient()
       if err != nil {
         log.Error("Could not create Kuberenetes client", "error", err)
@@ -55,18 +55,22 @@ func main() {
 
       name, _ := sdkClient.GetAppName()
       slug, _ := sdkClient.GetAppSlug()
-      k8sClient.CreateExpiredEvent(slug, expiration)
-      log.Infof("License for %s is expired", name)
-      return errors.New(fmt.Sprintf("License for %s is expired", name))
-    }
-		return nil
+
+      k8sClient.CreateLicenseEvent(valid, slug, expiration)
+      if !valid {
+        log.Infof("License for %s is expired", name)
+        return errors.New(fmt.Sprintf("License for %s is expired", name))
+      }
+
+      log.Info("License is valid")
+      return nil
 	}
 
 	err := backoff.Retry(check, backoff.NewExponentialBackOff())
 	if err != nil {
+    log.Error("Error in license check", "error", err)
 		os.Exit(1)
 	}
 
-	log.Info("License is valid")
 	os.Exit(0)
 }
