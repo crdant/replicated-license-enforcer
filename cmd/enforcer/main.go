@@ -59,7 +59,7 @@ func check() error {
     name, _ := sdkClient.GetAppName()
     slug, _ := sdkClient.GetAppSlug()
 
-    k8sClient.CreateLicenseEvent(valid, slug, expiration)
+    k8sClient.CreateLicenseEvent(slug, expiration)
     if !valid {
       log.Infof("License for %s is expired", name)
       return errors.New(fmt.Sprintf("License for %s is expired", name))
@@ -86,7 +86,11 @@ func recheck() {
 }
 
 func main() {
-  log.SetLevel(log.DebugLevel)
+  logLevel := os.Getenv("LOG_LEVEL")
+  if logLevel == "" {
+    logLevel = "info"
+  }
+  log.ParseLevel(logLevel)
   log.Infof("Version: %s, Build Time: %s, GitCommit: %s\n", version.Version, version.BuildTime, version.GitSHA)
 
   recheckInterval := flag.Duration("recheck", time.Duration(0), "Recheck license periodically to assure it's still valid")
