@@ -1,0 +1,32 @@
+# use this example to create a service account that can read and write
+# the license enformcenet Kuberntes events, you'll need to make sure
+# your pod is run by the `licensed-application` service account
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: licenesed-application
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: slackernews-demo
+  name: license-enforcer-role
+rules:
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "create", "list", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: license-enforcer-role-binding
+  namespace: slackernews-demo
+subjects:
+- kind: ServiceAccount
+  name: slackernews
+  namespace: slackernews-demo
+roleRef:
+  kind: Role
+  name: license-enforcer-role
+  apiGroup: rbac.authorization.k8s.io

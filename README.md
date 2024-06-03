@@ -22,6 +22,59 @@ more general that multiple vendors could use. Not something for Replicated to
 ship (necessarily), but something that folks could use directly or as
 inspiration. Turns out, there was something I could do.
 
+
+## Usage
+
+### As an init container
+
+You can use this code. The most direct way is to add an init container to
+one or more workloads in your application that uses my image directly. The
+init container will stop your pod from running until the Replicated license is
+valid. 
+
+Add the following code to your manifest:
+
+```
+initContainers:
+- name: license-check
+  image: ghcr.io/crdant/replicated-license-enforcer:latest
+  env:
+    - name: REPLICATED_SDK_ENDPOINT
+      value: http://replicated:3000
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.namespace
+    - name: POD_UID
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.uid
+  imagePullPolicy: IfNotPresent
+```
+
+A couple of things to be aware of:
+
+1. You must be using the Replicated SDK and have an active Replicated
+   subscription or trial.
+2. I recommend pulling the image through the Replicated proxy using your the
+   custom domain you've set up for it. You'll need the right image pull secret
+   if you do that.
+3. The code creates Kubernetes events, so you need appropriate RBAC. You'll
+   want to create your a service account and assign it an appropriate role.
+   See [`examples/rbac.yaml`](./examples/rbac.yaml).
+
+### In your own code
+
+There are a couple of useful packages you can take advantage of if you'd
+rather incorporate enforcement into your own code. You can use the `client`
+package as a lightweight client for the needed parts of the Replicated SDK
 ## Limitations
 
 1. This code is provided _AS IS_ and is not supported by Replicated.
