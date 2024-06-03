@@ -87,7 +87,7 @@ func PrepareLicenseEvent(client EventClient, application string, date time.Time)
       Namespace:   podRef.Namespace,
       Labels: map[string]string{
         "replicated.com/application": application,
-        "replicated.com/expires-at": date.Format(time.RFC3339),
+        "replicated.com/expires-at": date.Format(time.DateOnly),
       },
     },
     Type:    eventType,
@@ -149,5 +149,5 @@ func getFieldSelector(date time.Time) string {
 
 func getLabelSelector(application string, date time.Time) string {
   log.Debug("Creating label selector", "replicated.com/application", application, "replicated.com/expires-at", date)
-  return fmt.Sprintf("replicated.com/application=%s,replicated.com/expires-at=%s", application, date.Format(time.RFC3339))
+  return fmt.Sprintf("replicated.com/application=%s,replicated.com/expires-at=%s", application, date.Format(time.DateOnly))
 }
