@@ -52,7 +52,6 @@ func TestSecondExpiredEvent(t *testing.T) {
     err = client.CreateLicenseEvent(application, past)
     event, err := client.GetLicenseEvent(application, past)
     assert.NoError(t, err)
-    assert.NoError(t, err)
     assert.Len(t, client.Events, 1)
     assert.Equal(t, int32(2), event.Count)
 }
