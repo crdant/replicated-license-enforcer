@@ -35,9 +35,9 @@ func GetObjectReference() v1.ObjectReference {
     }
 }
 
-func GetEventSource() v1.EventSource {
+func GetEventSource(application string) v1.EventSource {
     return v1.EventSource{
-      Component: "replicated",
+      Component: application,
     }
 }
  
@@ -95,7 +95,7 @@ func PrepareLicenseEvent(client EventClient, application string, date time.Time)
     Message: message,
     InvolvedObject: podRef,
     FirstTimestamp: metav1.Time{Time: time.Now()},
-    Source: GetEventSource(),
+    Source: GetEventSource(application),
     Count: 1,
   }
   return event, nil

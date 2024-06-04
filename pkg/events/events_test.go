@@ -12,7 +12,8 @@ import (
 func TestExpiredEvent(t *testing.T) {
     client := NewMockEventClient() 
     podRef := GetObjectReference()
-    application := "Slackernews"
+    application := "slackernews-mackerel"
+
     past := time.Now().Add(-24 * time.Hour)
   
     err := client.CreateLicenseEvent(application, past)
@@ -37,7 +38,7 @@ func TestExpiredEvent(t *testing.T) {
     assert.Equal(t, podRef.UID, event.InvolvedObject.UID)
 
     assert.NotEmpty(t, event.FirstTimestamp)
-    assert.Equal(t, "replicated", event.Source.Component)
+    assert.Equal(t, application, event.Source.Component)
 }
 
 func TestSecondExpiredEvent(t *testing.T) {
