@@ -51,24 +51,22 @@ jobs:
         id: version
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]] ; then
-            echo "version=${{ github.ref_name }}"
+            echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           else
-            echo "version=${{ github.sha }}"
+            echo "version=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Update package version
         id: update-package-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i ".package.version = \"$VERSION\"" ./deployment/melange.yaml
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
+          cmd: yq -i '.package.version = "${{ steps.version.outputs.version }}"' ./deployment/melange.yaml
 
       - name: Update container image version
         id: update-image-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i ".environment.VERSION = \"$VERSION\"" ./deployment/apko.yaml
+          cmd: yq -i '.environment.VERSION = "${{ steps.version.outputs.version }}"' ./deployment/apko.yaml
         env:
           VERSION: ${{ steps.version.outputs.version }}
 
