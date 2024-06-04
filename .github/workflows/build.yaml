@@ -47,17 +47,13 @@ jobs:
         id: update-package-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.package.version = "${VERSION}"' ./deployment/melange.yaml
-        env:
-          VERSION: ${{ github.ref }}
+          cmd: yq -i '.package.version = "${{ github.ref }}"' ./deployment/melange.yaml
 
       - name: Update continer image version
         id: update-image-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.environment.VERSION = "${VERSION}"' ./deployment/apko.yaml
-        env:
-          VERSION: ${{ github.ref }}
+          cmd: yq -i '.environment.VERSION = "${{ github.ref }}"' ./deployment/apko.yaml
 
       - name: Create cache directory
         id: cache-dir
