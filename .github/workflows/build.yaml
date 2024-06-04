@@ -60,13 +60,17 @@ jobs:
         id: update-package-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.package.version = "${{ steps.version.outputs.version }}"' ./deployment/melange.yaml
+          cmd: yq -i ".package.version = \"$VERSION\"" ./deployment/melange.yaml
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
 
       - name: Update container image version
         id: update-image-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.environment.VERSION = "${{ steps.version.outputs.version }}"' ./deployment/apko.yaml
+          cmd: yq -i ".environment.VERSION = \"$VERSION\"" ./deployment/apko.yaml
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
 
       - name: Create cache directory
         id: cache-dir
