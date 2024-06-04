@@ -68,7 +68,7 @@ jobs:
           sign-with-temporary-key: true
           cache-dir: ${{ steps.cache.outputs.cache_dir }}
 
-  push-image:
+  publish-image:
     runs-on: ubuntu-22.04
     needs: 
       - build-image
