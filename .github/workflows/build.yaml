@@ -50,7 +50,7 @@ jobs:
       - name: Determine version
         id: set-version
         run: |
-          if [[ ${{ github.ref_type }} eq "tag" ]] ; then
+          if [[ "${{ github.ref_type }}" == "tag" ]] ; then
             echo "version=${{ github.ref_name }}"
           else
             echo "version=${{ github.sha }}"
