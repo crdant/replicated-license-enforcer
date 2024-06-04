@@ -43,16 +43,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Update package version
+        id: update-package-version
+        uses: mikefarah/yq@master
+            with:
+              cmd: yq -i \".package.version = "${VERSION}"\" deployment/melange.yaml
 
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
+      - name: Update continer image version
+        id: update-image-version
+        uses: mikefarah/yq@master
+            with:
+              cmd: yq -i \".environment.VERSION = "${VERSION}"\" deployment/apko.yaml
+
+      - name: Create cache directory
+        id: cache-dir
+        shell: bash
+        run: echo "cache_dir=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"r
+
+      - name: Build enforcer package
+        uses: chainguard-dev/actions/melange-build@main
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          config: ./deployment/melange.yaml
+          archs: amd64,arm64
+          sign-with-temporary-key: true
+          cache-dir: ${{ steps.cache.outputs.cache_dir }}
 
+  push-image:
+    runs-on: ubuntu-22.04
+    needs: 
+      - build-image
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      matrix:
+        tag: ${{ needs.build-image.outputs.tags }}
+    steps:
       - name: Extract metadata (tags, labels) for image image
         id: meta
         uses: docker/metadata-action@v5
@@ -65,28 +92,22 @@ jobs:
                 type=ref,event=tag
                 type=ref,event=pr
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer
-
-      - uses: int128/docker-build-cache-config-action@v1
-        id: cache
+      - name: Push enforcer image
+        uses: chainguard-images/actions/apko-publish@main
+        id: apko-publish
         with:
-          image: ghcr.io/${{ github.repository }}/cache
-
-      - name: Build enforcer image
-        id: build
-        uses: docker/build-push-action@v5
-        with:
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          file: ./deployment/Dockerfile
-          push: true
-          cache-from: ${{ steps.cache.outputs.cache-from }}
-          cache-to: ${{ steps.cache.outputs.cache-to }}
-
+          config: ./deployment/apko.yaml
+          tag: ${{ matrix.tag }}
+          archs: amd64,arm64
+          vcs-url: true
+          generic-user: ${{ github.actor }}
+          generic-pass: ${{ secrets.GITHUB_TOKEN }}
 
   sign-image:
     runs-on: ubuntu-22.04
     needs:
       - build-image
+      - publish-image
     permissions:
       contents: read
       packages: write
