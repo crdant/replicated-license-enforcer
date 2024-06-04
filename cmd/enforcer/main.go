@@ -2,8 +2,10 @@ package main
 
 import (
 	"errors"
+  "flag"
 	"fmt"
 	"os"
+  "os/signal"
 	"time"
 
 	"github.com/crdant/replicated-license-enforcer/pkg/client"
@@ -11,6 +13,7 @@ import (
 	"github.com/crdant/replicated-license-enforcer/pkg/version"
 
   "github.com/charmbracelet/log"
+  cron "github.com/robfig/cron/v3"
 	backoff "github.com/cenkalti/backoff/v4"
 )
 
@@ -27,50 +30,91 @@ func checkLicense(client client.ReplicatedClient) (bool, error) {
 	return true, nil
 }
 
-func main() {
-  log.SetLevel(log.DebugLevel)
-	endpoint := os.Getenv("REPLICATED_SDK_ENDPOINT")
-	sdkClient := client.NewClient(endpoint)
+func check() error {
+    endpoint := os.Getenv("REPLICATED_SDK_ENDPOINT")
+    if endpoint == "" {
+      // this is the default in the current build of the SDK
+      endpoint = "http://replicated:3000"
+    } 
+    sdkClient := client.NewClient(endpoint)
+
+    valid, err := checkLicense(sdkClient)
+    if err != nil {
+      log.Error("checking license", "error", err)
+      return err
+    }
+    log.Debug("Fetching license details and creating event")
+
+    k8sClient, err := events.NewKubernetesEventClient()
+    if err != nil {
+      log.Error("Could not create Kuberenetes client", "error", err)
+      return err
+    }
+    expiration, err := sdkClient.GetExpirationDate()
+    if err != nil {
+      log.Error("Error finding expiration date to incldue in kubernetes event", "error", err)
+      return err
+    }
+
+    name, _ := sdkClient.GetAppName()
+    slug, _ := sdkClient.GetAppSlug()
+
+    k8sClient.CreateLicenseEvent(slug, expiration)
+    if !valid {
+      log.Infof("License for %s is expired", name)
+      return errors.New(fmt.Sprintf("License for %s is expired", name))
+    }
+
+    log.Info("License is valid")
+    return nil
+}
+
+func validate() error {
+    err := backoff.Retry(check, backoff.NewExponentialBackOff())
+    if err != nil {
+        log.Error("Error in license check, skipping current check", "error", err)
+        return errors.New("Error in license check")
+    }
+    return nil
+}
   
-  fmt.Printf("Version: %s, Build Time: %s, GitCommit: %s\n", version.Version, version.BuildTime, version.GitSHA)
+func recheck() { 
+  err := validate()
+  if err != nil {
+      log.Error("Error in license check, skipping current check", "error", err)
+  }
+}
 
-	check := func() error {
-      valid, err := checkLicense(sdkClient)
-      if err != nil {
-        log.Error("checking license", "error", err)
-        return err
-      }
-      log.Debug("Fetching license details and creating event")
+func main() {
+  logLevel := os.Getenv("LOG_LEVEL")
+  if logLevel == "" {
+    logLevel = "info"
+  }
+  log.ParseLevel(logLevel)
+  log.Infof("Version: %s, Build Time: %s, GitCommit: %s\n", version.Version, version.BuildTime, version.GitSHA)
 
-      k8sClient, err := events.NewKubernetesEventClient()
-      if err != nil {
-        log.Error("Could not create Kuberenetes client", "error", err)
-        return err
-      }
-      expiration, err := sdkClient.GetExpirationDate()
-      if err != nil {
-        log.Error("Error finding expiration date to incldue in kubernetes event", "error", err)
-        return err
-      }
+  recheckInterval := flag.Duration("recheck", time.Duration(0), "Recheck license periodically to assure it's still valid")
+  flag.Parse()
 
-      name, _ := sdkClient.GetAppName()
-      slug, _ := sdkClient.GetAppSlug()
+  err := validate()
+  if err != nil {
+    log.Error("Error checking license validity", "error", err)
+    os.Exit(1)
+  }
+  
+  if *recheckInterval != time.Duration(0) {
+    log.Infof("Rechecking license every %v", *recheckInterval)
+    c := cron.New()
+    _, err := c.AddFunc(fmt.Sprintf("@every %v", recheckInterval), recheck)
+    if err != nil {
+      log.Error("Could not schedule periodic license check", "error", err)
+      return
+    }
+    go c.Start()
 
-      k8sClient.CreateLicenseEvent(valid, slug, expiration)
-      if !valid {
-        log.Infof("License for %s is expired", name)
-        return errors.New(fmt.Sprintf("License for %s is expired", name))
-      }
-
-      log.Info("License is valid")
-      return nil
-	}
-
-	err := backoff.Retry(check, backoff.NewExponentialBackOff())
-	if err != nil {
-    log.Error("Error in license check", "error", err)
-		os.Exit(1)
-	}
-
-	os.Exit(0)
+    sig := make(chan os.Signal, 1)
+    signal.Notify(sig, os.Interrupt, os.Kill)
+    <-sig
+  }
+  os.Exit(0)
 }

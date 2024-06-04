@@ -17,8 +17,8 @@ import (
 )
 
 type EventClient interface {
-    GetLicenseEvent(valid bool, application string, date time.Time) (*v1.Event, error)
-    CreateLicenseEvent(valid bool, application string, date time.Time) error
+    GetLicenseEvent(application string, date time.Time) (*v1.Event, error)
+    CreateLicenseEvent(application string, date time.Time) error
 }
 
 type KubernetesEventClient struct {
@@ -35,9 +35,9 @@ func GetObjectReference() v1.ObjectReference {
     }
 }
 
-func GetEventSource() v1.EventSource {
+func GetEventSource(application string) v1.EventSource {
     return v1.EventSource{
-      Component: "replicated",
+      Component: application,
     }
 }
  
@@ -54,15 +54,19 @@ func NewKubernetesEventClient() (*KubernetesEventClient, error) {
 }
 
 
-func PrepareLicenseEvent(client EventClient, valid bool, application string, date time.Time) (*v1.Event, error) {
-  event, err := client.GetLicenseEvent(valid, application, date)
+func PrepareLicenseEvent(client EventClient, application string, date time.Time) (*v1.Event, error) {
+  valid := date.After(time.Now())
+  event, err := client.GetLicenseEvent(application, date)
   if err != nil {
     log.Error("Error getting existing event", "error", err)
     return nil, err
   }
   if event != nil {
-    log.Debug("Event already exists, incrementing count", "previous", event.Count)
-    event.Count++
+    log.Debug("Event already exists")
+    if !valid {
+      log.Debug("Expired event, incrementing count", "previous", event.Count)
+      event.Count++
+    }
     return event, nil
   }
 
@@ -81,26 +85,27 @@ func PrepareLicenseEvent(client EventClient, valid bool, application string, dat
     ObjectMeta: metav1.ObjectMeta{
       GenerateName: fmt.Sprintf("%s.", strings.ToLower(application)),
       Namespace:   podRef.Namespace,
+      Labels: map[string]string{
+        "replicated.com/application": application,
+        "replicated.com/expires-at": date.Format(time.DateOnly),
+      },
     },
     Type:    eventType,
     Reason:  reason,
     Message: message,
     InvolvedObject: podRef,
     FirstTimestamp: metav1.Time{Time: time.Now()},
-    Source: GetEventSource(),
+    Source: GetEventSource(application),
     Count: 1,
   }
   return event, nil
 }
 
-func (c *KubernetesEventClient) GetLicenseEvent(valid bool, application string, date time.Time) (*v1.Event, error) {
+func (c *KubernetesEventClient) GetLicenseEvent(application string, date time.Time) (*v1.Event, error) {
     podRef := GetObjectReference()
-    reason := "Valid"
-    if !valid {
-        reason = "Expired"
-    }
     listOptions := metav1.ListOptions{
-        FieldSelector: fmt.Sprintf("involvedObject.uid=%s,reason=%s", podRef.UID, reason),
+        FieldSelector: getFieldSelector(date),
+        LabelSelector: getLabelSelector(application, date),
     }
     events, err := c.Clientset.CoreV1().Events(podRef.Namespace).List(context.TODO(), listOptions)
     if err != nil {
@@ -115,8 +120,8 @@ func (c *KubernetesEventClient) GetLicenseEvent(valid bool, application string, 
 }
 
 
-func (c *KubernetesEventClient) CreateLicenseEvent(valid bool, application string, date time.Time) error {
-    event, err := PrepareLicenseEvent(c, valid, application, date)
+func (c *KubernetesEventClient) CreateLicenseEvent(application string, date time.Time) error {
+    event, err := PrepareLicenseEvent(c, application, date)
     if err != nil {
       log.Error("Error preparing Kubernetes event", "error", err)
       return nil
@@ -130,4 +135,19 @@ func (c *KubernetesEventClient) CreateLicenseEvent(valid bool, application strin
 
     _, err = c.Clientset.CoreV1().Events(event.ObjectMeta.Namespace).Create(context.TODO(), event, metav1.CreateOptions{});
     return err
+}
+
+func getFieldSelector(date time.Time) string {
+  valid := date.After(time.Now())
+  reason := "Valid"
+  if !valid {
+      reason = "Expired"
+  }
+  log.Debug("Creating field selector", "involvedObject.name", os.Getenv("POD_NAME"), "involvedObject.namespace", os.Getenv("POD_NAMESPACE"), "reason", reason)
+  return fmt.Sprintf("involvedObject.name=%s,involvedObject.namespace=%s,reason=%s", os.Getenv("POD_NAME"), os.Getenv("POD_NAMESPACE"), reason)
+}
+
+func getLabelSelector(application string, date time.Time) string {
+  log.Debug("Creating label selector", "replicated.com/application", application, "replicated.com/expires-at", date)
+  return fmt.Sprintf("replicated.com/application=%s,replicated.com/expires-at=%s", application, date.Format(time.DateOnly))
 }
