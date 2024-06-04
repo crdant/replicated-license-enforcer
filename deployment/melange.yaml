@@ -1,8 +1,8 @@
 package:
-  name: replicated-head
+  name: replicated-license-enforcer
   version: ${GIT_TAG}
   epoch: 0
-  description: replicated package
+  description: replicated licensee enforcement package
   copyright:
     - license: Apache-2.0
 

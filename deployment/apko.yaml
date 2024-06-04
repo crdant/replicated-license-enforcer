@@ -26,4 +26,4 @@ environment:
   VERSION: ${GIT_TAG}
 
 entrypoint:
-  command: /replicated api
+  command: /enforcer
