@@ -58,7 +58,7 @@ jobs:
       - name: Create cache directory
         id: cache-dir
         shell: bash
-        run: echo "cache_dir=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"r
+        run: echo "cache_dir=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
 
       - name: Build enforcer package
         uses: chainguard-dev/actions/melange-build@main
