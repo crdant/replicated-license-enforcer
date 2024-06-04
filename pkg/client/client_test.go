@@ -18,7 +18,7 @@ func TestNewClient(t *testing.T) {
     }
 }
 
-func TestMakeValidGetRequest(t *testing.T) {
+func TestValidGetRequest(t *testing.T) {
     server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         if r.Method != http.MethodGet {
             t.Errorf("Expected method GET, got %s", r.Method)
@@ -46,7 +46,7 @@ func TestMakeValidGetRequest(t *testing.T) {
     }
 }
 
-func TestMakeNotFoundGetRequest(t *testing.T) {
+func TestNotFoundGetRequest(t *testing.T) {
     server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         if r.Method != http.MethodGet {
             t.Errorf("Expected method GET, got %s", r.Method)
