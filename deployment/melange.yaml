@@ -28,4 +28,4 @@ pipeline:
       export GIT_TAG=${{package.version}}
 
       make build
-      mv bin/replicated "${DESTDIR}/replicated"
+      mv bin/enforcer "${DESTDIR}/enforcer"
