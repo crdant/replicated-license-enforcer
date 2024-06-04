@@ -10,6 +10,7 @@ import (
     "encoding/base64"
     "encoding/pem"
 
+    log "github.com/charmbracelet/log"
     license "github.com/replicatedhq/replicated-sdk/pkg/license/types"
 )
 
@@ -31,21 +32,25 @@ func (c *Client) GetExpirationDate() (time.Time, error) {
 func (c *Client) GetLicenseField(field string) (*license.LicenseField, error) {
     response, err := c.makeRequest("GET", fmt.Sprintf("/api/v1/license/fields/%s", field) , nil)
     if err != nil {
+        log.Debug("Error calling Replicated SDK", "error", err)
         return nil, err
     }
     defer response.Body.Close()
 
     var licenseField license.LicenseField
     if err := json.NewDecoder(response.Body).Decode(&licenseField); err != nil {
-         return nil, err
+        log.Debug("Error decoding API response", "error", err)
+        return nil, err
     }
     if err := c.verifyLicenseField(&licenseField); err != nil {
+        log.Debug("Error verifying license field", "error", err)
         return nil, err
     }
     return &licenseField, nil
 }
 
 func (c *Client) verifyLicenseField(field *license.LicenseField) (error) {
+    log.Debug("Verifying license field", "field", field.Name, "type", field.ValueType, "value", field.Value)
     value := ""
     ok := true
 
@@ -56,17 +61,10 @@ func (c *Client) verifyLicenseField(field *license.LicenseField) (error) {
         return fmt.Errorf("%s value is not a valid int, license may have been tampered with", field.ValueType)
       }
     case "Integer":
-      integer, ok := field.Value.(int)
-      if !ok {
-        return fmt.Errorf("Integer value is not a valid int, license may have been tampered with")
-      }
-      value = fmt.Sprintf("%d", integer)
+      value = fmt.Sprintf("%d", int(field.Value.(float64)))
+      log.Debug("String value", "value", value)
     case "Boolean":
-      boolean, ok := field.Value.(bool)
-      if !ok {
-        return fmt.Errorf("Boolean value is not a valid bool, license may have been tampered with")
-      }
-      value = fmt.Sprintf("%t", boolean)
+      value = fmt.Sprintf("%t", field.Value.(bool))
     }
     signature := field.Signature.V1
 

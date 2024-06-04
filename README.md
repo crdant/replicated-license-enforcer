@@ -25,6 +25,21 @@ inspiration. Turns out, there was something I could do.
 
 ## Usage
 
+Regardless of how you're using the code, there's a basic assumption that you
+are [using the Replicated
+SDK](https://docs.replicated.com/vendor/replicated-sdk-overview). If you're
+not, you need to create a dependency on it for your Helm chart.
+
+```
+dependencies:
+- name: replicated
+  repository: oci://registry.replicated.com/library
+  version: 1.0.0-beta.20
+```
+
+The version might have changed since I last updated this README, so take a
+look at the [latest releases](https://github.com/replicatedhq/replicated-sdk/releases).
+
 ### As an init container
 
 The most direct way to use this code is to add an init container to
@@ -115,10 +130,79 @@ initContainers:
 
 ### In your own code
 
-There are a couple of useful packages you can take advantage of if you'd
-rather incorporate enforcement into your own code. You can use the `client`
-package as a lightweight client for the needed parts of the Replicated SDK and
-the `event` package to record license events.
+The core packages in this repository are re-usable in your own license
+enforcement code. 
+
+#### `enforce` Package
+
+The main enforcement code is the package `enforce`. The `enforce` command is a
+simple CLI wrapper around that package, so you can 
+
+To validate the license as your code starts up (just like the init container):
+
+```go
+package main
+
+import (
+    "github.com/crdant/replicated-license-enforcer/pkg/enforce"
+)
+
+func main() {
+    // Check license before we start
+    enforcer := enforce.DefaultEnforcer()
+	err := enforcer.Validate()
+	if err != nil {
+		log.Error("Error checking license validity", "error", err)
+		os.Exit(1)
+	}
+
+   // rest of your code here 
+}
+```
+
+Your code won't run until the valid license is in place, and you'll see the
+license valid/expired events associated with the pod in Kubernetes.
+
+If you want to continue monitor the license as your application runs, with the
+same valid/invalid events generated, use `Monitor` after you initial
+validation completes validation.
+
+```go
+package main
+
+import (
+    "github.com/crdant/replicated-license-enforcer/pkg/enforce"
+)
+
+func main() {
+    // Check license before we start
+    enforcer := enforce.DefaultEnforcer()
+	err := enforcer.Validate()
+	if err != nil {
+		log.Error("Error checking license validity", "error", err)
+		os.Exit(1)
+	}
+
+    // set the interval for rechecking the license, license expire on a given
+    // day at 00:00:00 UTC, but checking more often can help with picking up 
+    // a license that has been extended
+    recheckInterval := 4h
+    enforcer.Monitor(recheckInterval)
+
+    // rest of your code here 
+}
+```
+
+#### `client` Package
+
+The `client` package is a client for the Replicated SDK that focuses on the
+fields that are most useful for license enforcement. The client is simplified
+for this purpose, but may evolve into a more complete client over time.
+
+#### `event` Package
+
+A purpose-built package for recording Kubernetes events related to the state
+of the Replicated license.
 
 ## Limitations
 

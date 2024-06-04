@@ -8,11 +8,7 @@ import (
 
 type AppInfo = app.GetCurrentAppInfoResponse
 
-type AppClient interface {
-  GetAppName() (string, error) 
-  GetAppSlug() (string, error) 
-}
-
+// Returns the name of for the application, as returned from the Replicated SDK
 func (c *Client) GetAppName() (string, error) {
     info, err := c.GetAppInfo()
     if err != nil {
@@ -21,6 +17,8 @@ func (c *Client) GetAppName() (string, error) {
     return info.AppName, nil 
 }
 
+// Returns the application slug for the application, as returned from the
+// Replicated SDK
 func (c *Client) GetAppSlug() (string, error) {
     info, err := c.GetAppInfo()
     if err != nil {
@@ -29,6 +27,9 @@ func (c *Client) GetAppSlug() (string, error) {
     return info.AppSlug, nil 
 }
 
+// List details about an application instance, including the app name, location
+// of the Helm chart in the Replicated OCI registry, and details about the
+// current application release that the instance is running.
 func (c *Client) GetAppInfo() (*AppInfo, error) {
     response, err := c.makeRequest("GET", "/api/v1/app/info", nil)
     if err != nil {
