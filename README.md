@@ -208,7 +208,8 @@ of the Replicated license.
 
 1. This code is provided _AS IS_ and is not supported by Replicated.
 
-2. Your customer can circumvent this by editing Kubernetes manifests. I don't
-   consider that too much of a limitation because you still have legal
-   remedies. It'll even help your case that the worked to circumvent your
-   enforcement.
+2. Your customer can circumvent the init container or sidecar implementations
+   by editing Kubernetes manifests. I don't consider that too much of a
+   limitation because you still have legal remedies. It'll even help your case
+   that the worked to circumvent your enforcement. The best way to avoid this
+   is to use the `enforce` package in your code.
