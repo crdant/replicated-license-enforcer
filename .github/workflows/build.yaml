@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Determine version
-        id: set-version
+        id: version
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]] ; then
             echo "version=${{ github.ref_name }}"
@@ -60,13 +60,13 @@ jobs:
         id: update-package-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.package.version = "${{ steps.set-version.outputs.version }}"' ./deployment/melange.yaml
+          cmd: yq -i '.package.version = "${{ steps.version.outputs.version }}"' ./deployment/melange.yaml
 
-      - name: Update continer image version
+      - name: Update container image version
         id: update-image-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.environment.VERSION = "${{ steps.set-version.outputs.version }}"' ./deployment/apko.yaml
+          cmd: yq -i '.environment.VERSION = "${{ steps.version.outputs.version }}"' ./deployment/apko.yaml
 
       - name: Create cache directory
         id: cache-dir
