@@ -10,10 +10,37 @@ import (
 	"github.com/crdant/replicated-license-enforcer/pkg/events"
 
   "github.com/charmbracelet/log"
+  cron "github.com/robfig/cron/v3"
 	backoff "github.com/cenkalti/backoff/v4"
 )
 
-func isValid(client client.ReplicatedClient) (bool, error) {
+type Enforcer struct {
+    sdkClient client.ReplicatedClient ;
+    eventClient events.EventClient ;
+    scheduler *cron.Cron ;
+}
+
+func DefaultEnforcer() *Enforcer {
+    endpoint := os.Getenv("REPLICATED_SDK_ENDPOINT")
+    if endpoint == "" {
+      // this is the default in the current build of the SDK
+      endpoint = "http://replicated:3000"
+    } 
+
+    sdkClient := client.NewClient(endpoint)
+    eventClient, err := events.NewKubernetesEventClient()
+    if err != nil {
+      log.Error("Error creating Kubernetes event client", "error", err)
+      return nil
+    }
+    return NewEnforcer(sdkClient, eventClient)
+}
+
+func NewEnforcer(sdkClient client.ReplicatedClient, eventClient events.EventClient) *Enforcer {
+    return &Enforcer{sdkClient: sdkClient, eventClient: eventClient, scheduler: cron.New()}
+}
+
+func (e *Enforcer) isValid(client client.ReplicatedClient) (bool, error) {
 	expiration, err := client.GetExpirationDate()
 	if err != nil {
 		return false, err
@@ -26,24 +53,24 @@ func isValid(client client.ReplicatedClient) (bool, error) {
 	return true, nil
 }
 
-func check(sdkClient client.ReplicatedClient, k8sClient events.EventClient) error {
-    valid, err := isValid(sdkClient)
+func (e *Enforcer) Check() error {
+    valid, err := e.isValid(e.sdkClient)
     if err != nil {
       log.Error("checking license", "error", err)
       return err
     }
     log.Debug("Fetching license details and creating event")
 
-    expiration, err := sdkClient.GetExpirationDate()
+    expiration, err := e.sdkClient.GetExpirationDate()
     if err != nil {
       log.Error("Error finding expiration date to incldue in kubernetes event", "error", err)
       return err
     }
 
-    name, _ := sdkClient.GetAppName()
-    slug, _ := sdkClient.GetAppSlug()
+    name, _ := e.sdkClient.GetAppName()
+    slug, _ := e.sdkClient.GetAppSlug()
 
-    k8sClient.CreateLicenseEvent(slug, expiration)
+    e.eventClient.CreateLicenseEvent(slug, expiration)
     if !valid {
       log.Infof("License for %s is expired", name)
       return errors.New(fmt.Sprintf("License for %s is expired", name))
@@ -53,24 +80,8 @@ func check(sdkClient client.ReplicatedClient, k8sClient events.EventClient) erro
     return nil
 }
 
-func Check() error {
-    endpoint := os.Getenv("REPLICATED_SDK_ENDPOINT")
-    if endpoint == "" {
-      // this is the default in the current build of the SDK
-      endpoint = "http://replicated:3000"
-    } 
-    sdkClient := client.NewClient(endpoint)
-    k8sClient, err := events.NewKubernetesEventClient()
-    if err != nil {
-      log.Error("Could not create Kuberenetes client", "error", err)
-      return err
-    }
-
-    return check(sdkClient, k8sClient)
-}
-
-func Validate() error {
-    err := backoff.Retry(Check, backoff.NewExponentialBackOff())
+func (e *Enforcer) Validate() error {
+    err := backoff.Retry(e.Check, backoff.NewExponentialBackOff())
     if err != nil {
         log.Error("Error in license check, skipping current check", "error", err)
         return errors.New("Error in license check")
@@ -78,13 +89,23 @@ func Validate() error {
     return nil
 }
   
-func Recheck() { 
-  err := Validate()
+func (e *Enforcer) Recheck() { 
+  err := e.Validate()
   if err != nil {
       log.Error("Error in license check, skipping current check", "error", err)
   }
 }
 
-func Monitor() {
+func (e *Enforcer) Monitor(interval time.Duration) {
+	_, err := e.scheduler.AddFunc(fmt.Sprintf("@every %v", interval), e.Recheck)
+	if err != nil {
+		log.Error("Could not schedule periodic license check", "error", err)
+		return
+	}
+  defer e.Stop()  
+	go e.scheduler.Start()
+}
 
+func (e *Enforcer) Stop() {
+	e.scheduler.Stop()
 }
