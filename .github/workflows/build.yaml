@@ -42,8 +42,7 @@ jobs:
       packages: write
       id-token: write
     outputs:
-      tags: ${{ steps.meta.outputs.tags }}
-      digest: ${{ steps.build.outputs.digest }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -62,14 +61,6 @@ jobs:
         with:
           cmd: yq -i '.package.version = "${{ steps.version.outputs.version }}"' ./deployment/melange.yaml
 
-      - name: Update container image version
-        id: update-image-version
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq -i '.environment.VERSION = "${{ steps.version.outputs.version }}"' ./deployment/apko.yaml
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-
       - name: Create cache directory
         id: cache-dir
         shell: bash
@@ -83,7 +74,7 @@ jobs:
           sign-with-temporary-key: true
           cache-dir: ${{ steps.cache.outputs.cache_dir }}
 
-  publish-image:
+  prepare-publish:
     runs-on: ubuntu-22.04
     needs: 
       - build-image
@@ -91,10 +82,15 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    strategy:
-      matrix:
-        tag: ${{ needs.build-image.outputs.tags }}
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
     steps:
+      - name: Update container image version
+        id: update-image-version
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -i '.environment.VERSION = "${{ needs.build-image.outputs.version }}"' ./deployment/apko.yaml
+
       - name: Extract metadata (tags, labels) for image image
         id: meta
         uses: docker/metadata-action@v5
@@ -102,11 +98,25 @@ jobs:
           tags: |
                 type=sha,format=long
                 type=schedule
-                type=raw,${{ inputs.version }}
+                type=raw,${{ needs.build-image.outputs.version }}
                 type=ref,event=branch
                 type=ref,event=tag
                 type=ref,event=pr
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer
+
+
+  publish-image:
+    runs-on: ubuntu-22.04
+    needs: 
+      - perepare-publish
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      matrix:
+        tag: ${{ needs.prepare-publish.outputs.tags }}
+    steps:
       - name: Push enforcer image
         uses: chainguard-images/actions/apko-publish@main
         id: apko-publish
