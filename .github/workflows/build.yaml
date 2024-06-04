@@ -108,7 +108,7 @@ jobs:
   publish-image:
     runs-on: ubuntu-22.04
     needs: 
-      - perepare-publish
+      - prepare-publish
     permissions:
       contents: read
       packages: write
