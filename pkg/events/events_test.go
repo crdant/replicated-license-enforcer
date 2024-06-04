@@ -26,7 +26,7 @@ func TestExpiredEvent(t *testing.T) {
     assert.Equal(t, "Warning", event.Type)
     assert.Equal(t, "Expired", event.Reason)
     assert.Equal(t, application, event.ObjectMeta.Labels["replicated.com/application"])
-    assert.Equal(t, past.Format(time.RFC3339), event.ObjectMeta.Labels["replicated.com/expires-at"])
+    assert.Equal(t, past.Format(time.DateOnly), event.ObjectMeta.Labels["replicated.com/expires-at"])
 
     assert.Equal(t, fmt.Sprintf("%s license is not valid, expired %v", application, past), event.Message)
 
