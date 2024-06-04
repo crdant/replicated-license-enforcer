@@ -2,6 +2,10 @@ name: Build and sign image
 
 on:
   push:
+    paths:
+      - '**'
+      - '!**.md'
+      - '!examples/**'
   pull_request:
 
 env:
