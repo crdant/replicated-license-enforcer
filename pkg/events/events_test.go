@@ -43,7 +43,7 @@ func TestExpiredEvent(t *testing.T) {
 
 func TestSecondExpiredEvent(t *testing.T) {
     client := NewMockEventClient() 
-    application := "Slackernews"
+    application := "slackernews-mackerel"
     past := time.Now().Add(-24 * time.Hour)
   
     err := client.CreateLicenseEvent(application, past)
@@ -59,7 +59,7 @@ func TestSecondExpiredEvent(t *testing.T) {
 
 func TestValidEvent(t *testing.T) {
     client := NewMockEventClient() 
-    application := "Slackernews"
+    application := "slackernews-mackerel"
     future := time.Now().Add(24 * time.Hour)
   
     err := client.CreateLicenseEvent(application, future)
@@ -73,7 +73,7 @@ func TestValidEvent(t *testing.T) {
 
 func TestSecondValidEvent(t *testing.T) {
     client := NewMockEventClient() 
-    application := "Slackernews"
+    application := "slackernews-mackerel"
     future := time.Now().Add(24 * time.Hour)
   
     err := client.CreateLicenseEvent(application, future)
@@ -91,7 +91,7 @@ func TestSecondValidEvent(t *testing.T) {
 
 func TestValidNewExpiration(t *testing.T) {
     client := NewMockEventClient() 
-    application := "Slackernews"
+    application := "slackernews-mackerel"
     future := time.Now().Add(24 * time.Hour)
     renewal := time.Now().Add(48 * time.Hour)
   
