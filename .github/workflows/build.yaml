@@ -47,17 +47,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Determine version
+        id: set-version
+        run: |
+          if [[ ${{ github.ref_type }} eq "tag" ]] ; then
+            echo "version=${{ github.ref_name }}"
+          else
+            echo "version=${{ github.sha }}"
+          fi
+
       - name: Update package version
         id: update-package-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.package.version = "${{ github.ref }}"' ./deployment/melange.yaml
+          cmd: yq -i '.package.version = "${{ steps.set-version.outputs.version }}"' ./deployment/melange.yaml
 
       - name: Update continer image version
         id: update-image-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.environment.VERSION = "${{ github.ref }}"' ./deployment/apko.yaml
+          cmd: yq -i '.environment.VERSION = "${{ steps.set-version.outputs.version }}"' ./deployment/apko.yaml
 
       - name: Create cache directory
         id: cache-dir
