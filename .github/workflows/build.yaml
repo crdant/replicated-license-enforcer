@@ -125,7 +125,7 @@ jobs:
         id: upload-package
         uses: actions/upload-artifact@v4
         with:
-          name: melange-package
+          name: melange-package-${{ matrix.arch }}
           path: ./packages
 
   prepare-publish:
@@ -180,19 +180,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download public key
-        id: download-key
-        uses: actions/download-artifact@v4
-        with:
-          name: melange-public-key
-          path: ./keys
-
-      - name: Download package
+      - name: Download public key and packages
         id: download-package
         uses: actions/download-artifact@v4
-        with:
-          name: melange-package
-          path: ./package
 
       - name: Push enforcer image
         uses: chainguard-images/actions/apko-publish@main
