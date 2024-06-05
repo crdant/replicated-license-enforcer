@@ -115,7 +115,7 @@ jobs:
         id: package
         uses: chainguard-dev/actions/melange-build-pkg@main
         with:
-          config: ./keys/melange.yaml
+          config: ./deployment/melange.yaml
           archs: ${{ matrix.arch }}
           sign-with-key: true
           signing-key-path: ./keys/melange.rsa
