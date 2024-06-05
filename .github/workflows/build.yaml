@@ -46,6 +46,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up melange
+        uses: chainguard-dev/actions/setup-melange@main
+
       - name: Determine version
         id: version
         run: |
@@ -81,6 +84,9 @@ jobs:
         arch: [ amd64, arm64 ]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up melange
+        uses: chainguard-dev/actions/setup-melange@main
 
       - name: Download public key
         id: download-key
