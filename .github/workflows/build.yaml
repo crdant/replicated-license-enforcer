@@ -98,7 +98,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: melange-public-key
-          path: ./keys/melange.rsa
+          path: ./keys
 
       - name: Update package version
         id: update-package-version
@@ -175,7 +175,8 @@ jobs:
     strategy:
       matrix: 
         tag: ${{fromJson(needs.prepare-publish.outputs.tags)}}
-        arch: [ amd64, arm64 ]
+    outputs:
+      digest: ${{ steps.publish.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
 
@@ -195,11 +196,11 @@ jobs:
 
       - name: Push enforcer image
         uses: chainguard-images/actions/apko-publish@main
-        id: apko-publish
+        id: publish
         with:
           config: ./deployment/apko.yaml
           tag: ${{ matrix.tag }}
-          archs: ${{ matrix.arg }}
+          archs: amd64,arm64
           vcs-url: true
           generic-user: ${{ github.actor }}
           generic-pass: ${{ secrets.GITHUB_TOKEN }}
@@ -229,6 +230,6 @@ jobs:
       - name: Sign the image
         id: sign-image
         run: |
-          cosign sign ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.build-package.outputs.digest }} --yes
-          echo "signature=$(cosign triangulate ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.build.outputs.web-digest }})" >> $GITHUB_OUTPUT
+          cosign sign ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.publish.outputs.digest }} --yes
+          echo "signature=$(cosign triangulate ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.publish.outputs.digest }})" >> $GITHUB_OUTPUT
 
