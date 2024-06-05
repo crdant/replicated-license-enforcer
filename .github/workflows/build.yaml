@@ -108,8 +108,8 @@ jobs:
       - name: Generate an array of tags from the metadata
         id: tags
         run: |
-          tags="$(echo ${{ steps.meta.outputs.tags }} | jq -R -s -c 'split("\n") | map(select(. != ""))')"
-          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
+          tags="$(echo ${{ steps.meta.outputs.json }} | jq -c .tags)"
+          echo "tags='${tags}'" >> "$GITHUB_OUTPUT"
 
   publish-image:
     runs-on: ubuntu-22.04
