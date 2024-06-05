@@ -182,7 +182,7 @@ jobs:
           path: ./keys
 
       - name: Download package
-        id: download-key
+        id: download-package
         uses: actions/download-artifact@v4
         with:
           name: melange-public-key
