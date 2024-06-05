@@ -55,8 +55,8 @@ jobs:
             echo "version=build.${{ github.run_id }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build enforcer package
-        id: package
+      - name: Generate key
+        id: generate-key
         uses: chainguard-dev/actions/melange-keygen@main
         with:
           signing-key-path: ./keys/melange.rsa
@@ -68,7 +68,7 @@ jobs:
           name: melange-public-key
           path: ./keys
 
-  build-image:
+  build-package:
     runs-on: ubuntu-22.04
     needs:
       - prepare-build
@@ -110,10 +110,17 @@ jobs:
           signing-key-path: ./keys/melange.rsa
           cache-dir: ${{ steps.cache.outputs.cache_dir }}
 
+      - name: Upload package
+        id: upload-package
+        uses: actions/upload-artifact@v4
+        with:
+          name: melange-public-key
+          path: ./packages
+
   prepare-publish:
     runs-on: ubuntu-22.04
     needs: 
-      - build-image
+      - build-package
     permissions:
       contents: read
       packages: write
@@ -127,7 +134,7 @@ jobs:
         id: update-image-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.environment.VERSION = "${{ needs.build-image.outputs.version }}"' ./deployment/apko.yaml
+          cmd: yq -i '.environment.VERSION = "${{ needs.build-package.outputs.version }}"' ./deployment/apko.yaml
 
       - name: Extract metadata (tags, labels) for image image
         id: meta
@@ -135,7 +142,7 @@ jobs:
         with:
           tags: |
                 type=schedule
-                type=raw,${{ needs.build-image.outputs.version }}
+                type=raw,${{ needs.build-package.outputs.version }}
                 type=ref,event=branch
                 type=ref,event=tag
                 type=ref,event=pr
@@ -168,6 +175,13 @@ jobs:
           name: melange-public-key
           path: ./keys
 
+      - name: Download package
+        id: download-key
+        uses: actions/download-artifact@v4
+        with:
+          name: melange-public-key
+          path: ./package
+
       - name: Push enforcer image
         uses: chainguard-images/actions/apko-publish@main
         id: apko-publish
@@ -182,7 +196,7 @@ jobs:
   sign-image:
     runs-on: ubuntu-22.04
     needs:
-      - build-image
+      - build-package
       - publish-image
     permissions:
       contents: read
@@ -204,6 +218,6 @@ jobs:
       - name: Sign the image
         id: sign-image
         run: |
-          cosign sign ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.build-image.outputs.digest }} --yes
+          cosign sign ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.build-package.outputs.digest }} --yes
           echo "signature=$(cosign triangulate ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.build.outputs.web-digest }})" >> $GITHUB_OUTPUT
 
