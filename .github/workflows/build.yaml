@@ -125,7 +125,7 @@ jobs:
         id: upload-package
         uses: actions/upload-artifact@v4
         with:
-          name: melange-public-key
+          name: melange-package
           path: ./packages
 
   prepare-publish:
@@ -191,7 +191,7 @@ jobs:
         id: download-package
         uses: actions/download-artifact@v4
         with:
-          name: melange-public-key
+          name: melange-package
           path: ./package
 
       - name: Push enforcer image
