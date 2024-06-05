@@ -83,7 +83,7 @@ jobs:
       packages: write
       id-token: write
     outputs:
-      tags: ${{ steps.meta.outputs.tags }}
+      tags: ${{ steps.tags.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
 
@@ -105,6 +105,11 @@ jobs:
                 type=ref,event=pr
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer
 
+      - name: Generate an array of tags from the metadata
+        id: tags
+        run: |
+          tags=$(echo ${{ step.meta.outputs.tags }} | jq -R -s -c 'split("\n") | map(select(. != ""))')"
+          echo "tags=${tags}" > ${GITHUB_OUTPUT}
 
   publish-image:
     runs-on: ubuntu-22.04
@@ -115,8 +120,8 @@ jobs:
       packages: write
       id-token: write
     strategy:
-      matrix:
-        tag: [ ${{ needs.prepare-publish.outputs.tags }} ]
+      matrix: 
+        tag: ${{fromJson(needs.prepare-publish.outputs.tags)}}
     steps:
       - uses: actions/checkout@v4
 
