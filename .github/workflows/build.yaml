@@ -58,6 +58,11 @@ jobs:
             echo "version=build.${{ github.run_id }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Prepare key directory
+        id: prepare-keydir
+        run: |
+          mkdir keys
+
       - name: Generate key
         id: generate-key
         uses: chainguard-dev/actions/melange-keygen@main
@@ -87,11 +92,6 @@ jobs:
 
       - name: Set up melange
         uses: chainguard-dev/actions/setup-melange@main
-
-      - name: Prepare key directory
-        id: prepare-keydir
-        run: |
-          mkdir keys
 
       - name: Download public key
         id: download-key
