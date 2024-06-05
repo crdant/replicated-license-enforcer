@@ -134,7 +134,7 @@ jobs:
 
       - name: Download public key
         id: download-key
-        uses: actions/upload-artifact@v4
+        uses: actions/download-artifact@v4
         with:
           name: melange-public-key
           path: ./deployment/melange.rsa.pub
