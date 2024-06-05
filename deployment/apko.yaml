@@ -6,10 +6,11 @@ contents:
     - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
     - ./deployment/melange.rsa.pub
   packages:
-    - replicated-head  # This is expected to be built locally by `melange`.
+    - replicated-license-enforcer # This is expected to be built locally by `melange`.
     - bash
     - busybox
     - curl
+    - jq
     - wolfi-baselayout
 
 accounts:
