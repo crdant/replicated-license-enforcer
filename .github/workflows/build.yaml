@@ -109,7 +109,7 @@ jobs:
         id: tags
         run: |
           tags="$(echo ${{ steps.meta.outputs.tags }} | jq -R -s -c 'split("\n") | map(select(. != ""))')"
-          echo "tags=${tags}" > ${GITHUB_OUTPUT}
+          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
 
   publish-image:
     runs-on: ubuntu-22.04
