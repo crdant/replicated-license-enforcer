@@ -33,7 +33,7 @@ jobs:
     - name: Build
       run: make build
 
-  build-image:
+  prepare-build:
     runs-on: ubuntu-22.04
     needs:
       - build-and-test
@@ -55,11 +55,45 @@ jobs:
             echo "version=build.${{ github.run_id }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Build enforcer package
+        id: package
+        uses: chainguard-dev/actions/melange-keygen@main
+        with:
+          signing-key-path: ./keys/melange.rsa
+
+      - name: Upload public key
+        id: upload-key
+        uses: actions/upload-artifact@v4
+        with:
+          name: melange-public-key
+          path: ./keys
+
+  build-image:
+    runs-on: ubuntu-22.04
+    needs:
+      - prepare-build
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      matrix: 
+        arch: [ amd64, arm64 ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download public key
+        id: download-key
+        uses: actions/download-artifact@v4
+        with:
+          name: melange-public-key
+          path: ./keys
+
       - name: Update package version
         id: update-package-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.package.version = "${{ steps.version.outputs.version }}"' ./deployment/melange.yaml
+          cmd: yq -i '.package.version = "${{ needs.prepare-build.outputs.version }}"' ./deployment/melange.yaml
 
       - name: Create cache directory
         id: cache-dir
@@ -67,20 +101,14 @@ jobs:
         run: echo "cache_dir=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
 
       - name: Build enforcer package
-        uses: chainguard-dev/actions/melange-build@main
+        id: package
+        uses: chainguard-dev/actions/melange-build-pkg@main
         with:
-          config: ./deployment/melange.yaml
-          archs: amd64,arm64
+          config: ./keys/melange.yaml
+          archs: ${{ matrix.arch }}
           sign-with-key: true
-          signing-key-path: ./deployment/melange.rsa
+          signing-key-path: ./keys/melange.rsa
           cache-dir: ${{ steps.cache.outputs.cache_dir }}
-
-      - name: Upload public key
-        id: upload-key
-        uses: actions/upload-artifact@v4
-        with:
-          name: melange-public-key
-          path: ./deployment/melange.rsa.pub
 
   prepare-publish:
     runs-on: ubuntu-22.04
@@ -129,6 +157,7 @@ jobs:
     strategy:
       matrix: 
         tag: ${{fromJson(needs.prepare-publish.outputs.tags)}}
+        arch: [ amd64, arm64 ]
     steps:
       - uses: actions/checkout@v4
 
@@ -137,7 +166,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: melange-public-key
-          path: ./deployment/melange.rsa.pub
+          path: ./keys
 
       - name: Push enforcer image
         uses: chainguard-images/actions/apko-publish@main
@@ -145,7 +174,7 @@ jobs:
         with:
           config: ./deployment/apko.yaml
           tag: ${{ matrix.tag }}
-          archs: amd64,arm64
+          archs: ${{ matrix.arg }}
           vcs-url: true
           generic-user: ${{ github.actor }}
           generic-pass: ${{ secrets.GITHUB_TOKEN }}
