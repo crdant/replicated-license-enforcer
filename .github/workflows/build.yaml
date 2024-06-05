@@ -85,6 +85,8 @@ jobs:
     outputs:
       tags: ${{ steps.meta.outputs.tags }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Update container image version
         id: update-image-version
         uses: mikefarah/yq@master
@@ -117,6 +119,8 @@ jobs:
       matrix:
         tag: ${{ needs.prepare-publish.outputs.tags }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Push enforcer image
         uses: chainguard-images/actions/apko-publish@main
         id: apko-publish
