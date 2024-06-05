@@ -98,7 +98,6 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           tags: |
-                type=sha,format=long
                 type=schedule
                 type=raw,${{ needs.build-image.outputs.version }}
                 type=ref,event=branch
@@ -117,7 +116,7 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        tag: ${{ needs.prepare-publish.outputs.tags }}
+        tag: [ ${{ needs.prepare-publish.outputs.tags }} ]
     steps:
       - uses: actions/checkout@v4
 
