@@ -88,12 +88,17 @@ jobs:
       - name: Set up melange
         uses: chainguard-dev/actions/setup-melange@main
 
+      - name: Prepare key directory
+        id: prepare-keydir
+        run: |
+          mkdir keys
+
       - name: Download public key
         id: download-key
         uses: actions/download-artifact@v4
         with:
           name: melange-public-key
-          path: ./keys
+          path: ./keys/melange.rsa
 
       - name: Update package version
         id: update-package-version
