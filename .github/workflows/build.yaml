@@ -161,8 +161,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
+          flavor: |
+            latest=auto
           tags: |
-            flavor=auto
             type=sha
             type=schedule
             type=semver
