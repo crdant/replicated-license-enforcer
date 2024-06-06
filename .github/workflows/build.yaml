@@ -38,7 +38,7 @@ jobs:
     - name: Build
       run: make build
 
-  prepare-build:
+  build-package:
     runs-on: ubuntu-22.04
     needs:
       - build-and-test
