@@ -74,42 +74,6 @@ jobs:
         with:
           signing-key-path: ./keys/melange.rsa
 
-      - name: Upload public key
-        id: upload-key
-        uses: actions/upload-artifact@v4
-        with:
-          name: melange-public-key
-          path: ./keys
-
-  build-package:
-    runs-on: ubuntu-22.04
-    needs:
-      - prepare-build
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-    strategy:
-      matrix: 
-        arch: [ amd64, arm64 ]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up melange
-        uses: chainguard-dev/actions/setup-melange@main
-
-      - name: Download public key
-        id: download-key
-        uses: actions/download-artifact@v4
-        with:
-          name: melange-public-key
-          path: ./keys
-
-      - name: debug output
-        run: |
-          ls -R keys
-          find . -name "melange.rsa.pub"
-
       - name: Update package version
         id: update-package-version
         uses: mikefarah/yq@master
@@ -126,10 +90,17 @@ jobs:
         uses: chainguard-dev/actions/melange-build-pkg@main
         with:
           config: ./deployment/melange.yaml
-          archs: ${{ matrix.arch }}
+          archs: amd64,arm64
           sign-with-key: true
           signing-key-path: ./keys/melange.rsa
           cache-dir: ${{ steps.cache.outputs.cache_dir }}
+
+      - name: Upload public key
+        id: upload-key
+        uses: actions/upload-artifact@v4
+        with:
+          name: melange-public-key
+          path: ./keys/melange.rsa.pub
 
       - name: Upload package
         id: upload-package
@@ -212,13 +183,6 @@ jobs:
           path: ./packages
           patttern: apk-*
           merge-multiple: true
-
-      - name: Debug artifact download
-        id: debug
-        run: |
-          ls -l
-          ls -R keys packages 
-          find . -name "melange.rsa*"
           
       - name: Push enforcer image
         uses: chainguard-images/actions/apko-publish@main
