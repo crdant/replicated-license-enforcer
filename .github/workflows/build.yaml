@@ -164,7 +164,7 @@ jobs:
     strategy:
       matrix: 
         tag: ${{fromJson(needs.meta.outputs.tags)}}
-    Outputs:
+    outputs:
       ref: ${{ steps.publish.outputs.digest }}
       image: ${{ steps.parse.outputs.image }}
       digest: ${{ steps.parse.outputs.digest }}
