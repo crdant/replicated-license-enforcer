@@ -17,7 +17,7 @@ env:
   REGISTRY: ghcr.io
  
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -38,10 +38,10 @@ jobs:
     - name: Build
       run: make build
 
-  build-package:
+  package:
     runs-on: ubuntu-22.04
     needs:
-      - build-and-test
+      - build
     permissions:
       contents: read
       packages: write
@@ -109,10 +109,10 @@ jobs:
           name: packages
           path: ./packages
 
-  prepare-publish:
+  meta:
     runs-on: ubuntu-22.04
     needs: 
-      - build-package
+      - package
     permissions:
       contents: read
       packages: write
@@ -126,7 +126,7 @@ jobs:
         id: update-image-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.environment.VERSION = "${{ needs.build-package.outputs.version }}"' ./deployment/apko.yaml
+          cmd: yq -i '.environment.VERSION = "${{ needs.package.outputs.version }}"' ./deployment/apko.yaml
 
       - name: Extract metadata (tags, labels) for image image
         id: meta
@@ -153,18 +153,18 @@ jobs:
         run: |
           echo tags="$(echo '${{ steps.meta.outputs.json }}' | jq -c .tags)" >> "$GITHUB_OUTPUT"
 
-  publish-image:
+  publish:
     runs-on: ubuntu-22.04
     needs: 
-      - prepare-publish
+      - meta
     permissions:
       contents: read
       packages: write
       id-token: write
     strategy:
       matrix: 
-        tag: ${{fromJson(needs.prepare-publish.outputs.tags)}}
-    outputs:
+        tag: ${{fromJson(needs.meta.outputs.tags)}}
+    Outputs:
       ref: ${{ steps.publish.outputs.digest }}
       image: ${{ steps.parse.outputs.image }}
       digest: ${{ steps.parse.outputs.digest }}
@@ -203,17 +203,17 @@ jobs:
           echo "digest=$( echo '${{ steps.publish.outputs.digest }}' | cut -d'@' -f2)" >> "$GITHUB_OUTPUT"
           
 
-  sign-image:
+  sign:
     runs-on: ubuntu-22.04
     needs:
-      - build-package
-      - publish-image
+      - package
+      - publish
     permissions:
       contents: read
       packages: write
       id-token: write
     outputs:
-      signature: ${{ steps.sign-image.outputs.signature }}
+      signature: ${{ steps.sign.outputs.signature }}
     steps:
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.3.0
@@ -226,24 +226,24 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sign the image
-        id: sign-image
+        id: sign
         run: |
-          cosign sign ${{ needs.publish-image.outputs.ref }} --yes
-          echo "signature=$(cosign triangulate ${{ needs.publish-image.outputs.ref }})" >> $GITHUB_OUTPUT
+          cosign sign ${{ needs.publish.outputs.ref }} --yes
+          echo "signature=$(cosign triangulate ${{ needs.publish.outputs.ref }})" >> $GITHUB_OUTPUT
 
   provenance: 
     # This job is responsible for generating the SLSA provenance for the image that was pushed to the registry.
     needs:
-      - publish-image
-      - sign-image
+      - publish
+      - sign
     permissions:
       actions: read # for detecting the Github Actions environment.
       id-token: write # for creating OIDC tokens for signing.
       packages: write # for uploading attestations.
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v1.10.0
     with: 
-      image: ${{ needs.publish-image.outputs.image }} 
-      digest: ${{ needs.publish-image.outputs.digest }}
+      image: ${{ needs.publish.outputs.image }} 
+      digest: ${{ needs.publish.outputs.digest }}
       registry-username: ${{ github.actor }}
     secrets:
       registry-password: ${{ secrets.GITHUB_TOKEN }}
