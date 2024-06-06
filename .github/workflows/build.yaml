@@ -2,16 +2,18 @@ name: Build and sign image
 
 on:
   push:
-    paths:
-      - '**'
-      - '!**.md'
-      - '!examples/**'
+    paths-ignore:
+      - '**.md'
+      - examples/**
     tag:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+\-beta\.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+\-alpha\.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+\-rc\.[0-9]+'
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - examples/**
 
 env:
   REGISTRY: ghcr.io
