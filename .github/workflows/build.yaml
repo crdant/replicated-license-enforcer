@@ -3,8 +3,8 @@ name: Build and sign image
 on:
   push:
     paths-ignore:
-      - '**.md'
-      - '!examples/**'
+      - **.md
+      - !examples/**
     tag:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+\-beta\.[0-9]+'
