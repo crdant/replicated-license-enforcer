@@ -234,6 +234,7 @@ jobs:
   provenance: 
     # This job is responsible for generating the SLSA provenance for the image that was pushed to the registry.
     needs:
+      - publish-image
       - sign-image
     permissions:
       actions: read # for detecting the Github Actions environment.
