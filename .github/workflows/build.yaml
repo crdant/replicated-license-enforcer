@@ -157,11 +157,15 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           tags: |
-                type=schedule
-                type=raw,${{ needs.build-package.outputs.version }}
-                type=ref,event=branch
-                type=ref,event=tag
-                type=ref,event=pr
+            flavor=auto
+            type=sha
+            type=schedule
+            type=semver
+            type=edge,branch=main
+            type=raw,${{ needs.build-package.outputs.version }}
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer
 
       - name: Generate an array of tags from the metadata
@@ -243,6 +247,6 @@ jobs:
       - name: Sign the image
         id: sign-image
         run: |
-          cosign sign ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.publish.outputs.digest }} --yes
-          echo "signature=$(cosign triangulate ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.publish.outputs.digest }})" >> $GITHUB_OUTPUT
+          cosign sign ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.publish-image.outputs.digest }} --yes
+          echo "signature=$(cosign triangulate ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.publish-image.outputs.digest }})" >> $GITHUB_OUTPUT
 
