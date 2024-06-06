@@ -74,7 +74,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: melange-public-key
-          path: ./keys
+          path: ./keys/melange.rsa.pub
 
   build-package:
     runs-on: ubuntu-22.04
@@ -125,7 +125,7 @@ jobs:
         id: upload-package
         uses: actions/upload-artifact@v4
         with:
-          name: melange-package-${{ matrix.arch }}
+          name: apk-${{ matrix.arch }}
           path: ./packages
 
   prepare-publish:
@@ -180,16 +180,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download public key and packages
+      - name: Download packages
         id: download-artifacts
         uses: actions/download-artifact@v4
+        with:
+          name: melange-public-key
+          path: ./keys
+
+      - name: Download packages
+        id: download-artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./packages
+          patttern: apk-*
+          merge-multiple: true
 
       - name: Debug artifact download
         id: debug
         run: |
           ls -l
           ls -R keys packages 
-          find . -name "melange.rsa.*"
+          find . -name "melange.rsa*"
           
       - name: Push enforcer image
         uses: chainguard-images/actions/apko-publish@main
