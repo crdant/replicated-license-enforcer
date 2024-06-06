@@ -106,7 +106,7 @@ jobs:
         id: upload-package
         uses: actions/upload-artifact@v4
         with:
-          name: apk-${{ matrix.arch }}
+          name: packages
           path: ./packages
 
   prepare-publish:
@@ -165,11 +165,13 @@ jobs:
       matrix: 
         tag: ${{fromJson(needs.prepare-publish.outputs.tags)}}
     outputs:
-      digest: ${{ steps.publish.outputs.digest }}
+      ref: ${{ steps.publish.outputs.digest }}
+      image: ${{ steps.parse.outputs.image }}
+      digest: ${{ steps.parse.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download packages
+      - name: Download public key
         id: download-keys
         uses: actions/download-artifact@v4
         with:
@@ -180,9 +182,8 @@ jobs:
         id: download-packages
         uses: actions/download-artifact@v4
         with:
+          name: packages
           path: ./packages
-          patttern: apk-*
-          merge-multiple: true
           
       - name: Push enforcer image
         uses: chainguard-images/actions/apko-publish@main
@@ -194,6 +195,13 @@ jobs:
           vcs-url: true
           generic-user: ${{ github.actor }}
           generic-pass: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Parse ref
+        id: parse
+        run: |
+          echo "image=$( echo '${{ steps.publish.output.digest }}' | cut -d'@' -f1)" >> "$GITHUB_OUTPUT"
+          echo "digest=$( echo '${{ steps.publish.output.digest }}' | cut -d'@' -f2)" >> "$GITHUB_OUTPUT"
+          
 
   sign-image:
     runs-on: ubuntu-22.04
@@ -220,6 +228,21 @@ jobs:
       - name: Sign the image
         id: sign-image
         run: |
-          cosign sign ${{ needs.publish-image.outputs.digest }} --yes
-          echo "signature=$(cosign triangulate ${{ needs.publish-image.outputs.digest }})" >> $GITHUB_OUTPUT
+          cosign sign ${{ needs.publish-image.outputs.ref }} --yes
+          echo "signature=$(cosign triangulate ${{ needs.publish-image.outputs.ref }})" >> $GITHUB_OUTPUT
 
+  provenance: 
+    # This job is responsible for generating the SLSA provenance for the image that was pushed to the registry.
+    needs:
+      - sign-image
+    permissions:
+      actions: read # for detecting the Github Actions environment.
+      id-token: write # for creating OIDC tokens for signing.
+      packages: write # for uploading attestations.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v1.10.0
+    with: 
+      image: ${{ needs.publish-image.outputs.image }} 
+      digest: ${{ needs.publish-image.outputs.digest }}
+      registry-username: ${{ github.actor }}
+    secrets:
+      registry-password: ${{ secrets.GITHUB_TOKEN }}
