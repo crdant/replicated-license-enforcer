@@ -2,6 +2,15 @@ name: Build and sign image
 
 on:
   push:
+    paths:
+      - '**'
+      - '!**.md'
+      - '!examples/**'
+    tag:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+\-beta\.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+\-alpha\.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+\-rc\.[0-9]+'
   pull_request:
 
 env:
@@ -29,7 +38,7 @@ jobs:
     - name: Build
       run: make build
 
-  build-image:
+  build-package:
     runs-on: ubuntu-22.04
     needs:
       - build-and-test
@@ -38,55 +47,159 @@ jobs:
       packages: write
       id-token: write
     outputs:
-      tags: ${{ steps.meta.outputs.tags }}
-      digest: ${{ steps.build.outputs.digest }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Set up melange
+        uses: chainguard-dev/actions/setup-melange@main
 
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]] ; then
+            echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=build.${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare key directory
+        id: prepare-keydir
+        run: |
+          mkdir keys
+
+      - name: Generate key
+        id: generate-key
+        uses: chainguard-dev/actions/melange-keygen@main
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          signing-key-path: ./keys/melange.rsa
+
+      - name: Update package version
+        id: update-package-version
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -i '.package.version = "${{ steps.version.outputs.version }}"' ./deployment/melange.yaml
+
+      - name: Create cache directory
+        id: cache-dir
+        shell: bash
+        run: echo "cache_dir=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+
+      - name: Build enforcer package
+        id: package
+        uses: chainguard-dev/actions/melange-build-pkg@main
+        with:
+          config: ./deployment/melange.yaml
+          archs: amd64,arm64
+          sign-with-key: true
+          signing-key-path: ./keys/melange.rsa
+          cache-dir: ${{ steps.cache.outputs.cache_dir }}
+
+      - name: Upload public key
+        id: upload-key
+        uses: actions/upload-artifact@v4
+        with:
+          name: melange-public-key
+          path: ./keys/melange.rsa.pub
+
+      - name: Upload package
+        id: upload-package
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ matrix.arch }}
+          path: ./packages
+
+  prepare-publish:
+    runs-on: ubuntu-22.04
+    needs: 
+      - build-package
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    outputs:
+      tags: ${{ steps.tags.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update container image version
+        id: update-image-version
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -i '.environment.VERSION = "${{ needs.build-package.outputs.version }}"' ./deployment/apko.yaml
 
       - name: Extract metadata (tags, labels) for image image
         id: meta
         uses: docker/metadata-action@v5
         with:
+          flavor: |
+            latest=auto
           tags: |
-                type=sha,format=long
-                type=schedule
-                type=raw,${{ inputs.version }}
-                type=ref,event=branch
-                type=ref,event=tag
-                type=ref,event=pr
+            type=sha
+            type=schedule
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}.{{minor}}.{{patch}}
+            type=edge,branch=main
+            type=raw,${{ needs.prepare-build.outputs.version }}
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer
 
-      - uses: int128/docker-build-cache-config-action@v1
-        id: cache
-        with:
-          image: ghcr.io/${{ github.repository }}/cache
+      - name: Generate an array of tags from the metadata
+        id: tags
+        run: |
+          echo tags="$(echo '${{ steps.meta.outputs.json }}' | jq -c .tags)" >> "$GITHUB_OUTPUT"
 
-      - name: Build enforcer image
-        id: build
-        uses: docker/build-push-action@v5
-        with:
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          file: ./deployment/Dockerfile
-          push: true
-          cache-from: ${{ steps.cache.outputs.cache-from }}
-          cache-to: ${{ steps.cache.outputs.cache-to }}
+  publish-image:
+    runs-on: ubuntu-22.04
+    needs: 
+      - prepare-publish
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      matrix: 
+        tag: ${{fromJson(needs.prepare-publish.outputs.tags)}}
+    outputs:
+      digest: ${{ steps.publish.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
 
+      - name: Download packages
+        id: download-keys
+        uses: actions/download-artifact@v4
+        with:
+          name: melange-public-key
+          path: ./keys
+
+      - name: Download packages
+        id: download-packages
+        uses: actions/download-artifact@v4
+        with:
+          path: ./packages
+          patttern: apk-*
+          merge-multiple: true
+          
+      - name: Push enforcer image
+        uses: chainguard-images/actions/apko-publish@main
+        id: publish
+        with:
+          config: ./deployment/apko.yaml
+          tag: ${{ matrix.tag }}
+          archs: amd64,arm64
+          vcs-url: true
+          generic-user: ${{ github.actor }}
+          generic-pass: ${{ secrets.GITHUB_TOKEN }}
 
   sign-image:
     runs-on: ubuntu-22.04
     needs:
-      - build-image
+      - build-package
+      - publish-image
     permissions:
       contents: read
       packages: write
@@ -107,6 +220,6 @@ jobs:
       - name: Sign the image
         id: sign-image
         run: |
-          cosign sign ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.build-image.outputs.digest }} --yes
-          echo "signature=$(cosign triangulate ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.build.outputs.web-digest }})" >> $GITHUB_OUTPUT
+          cosign sign ${{ needs.publish-image.outputs.digest }} --yes
+          echo "signature=$(cosign triangulate ${{ needs.publish-image.outputs.digest }})" >> $GITHUB_OUTPUT
 
