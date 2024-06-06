@@ -23,6 +23,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
     steps:
     - uses: actions/checkout@v4
     - name: Set up Go
@@ -224,9 +226,7 @@ jobs:
     needs:
       - publish
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      security-events: write
     steps:
       - name: Scan image
         uses: aquasecurity/trivy-action@0.21.0
