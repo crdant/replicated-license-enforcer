@@ -100,6 +100,11 @@ jobs:
           name: melange-public-key
           path: ./keys
 
+      - name: debug output
+        run: |
+          ls -R keys
+          find . -name "melange.rsa.pub"
+
       - name: Update package version
         id: update-package-version
         uses: mikefarah/yq@master
