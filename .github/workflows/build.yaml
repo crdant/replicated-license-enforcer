@@ -32,6 +32,9 @@ jobs:
     - name: Vet Code
       run: make vet
 
+    - name: Scan
+      run: make scan
+
     - name: Run Tests
       run: make test
 
