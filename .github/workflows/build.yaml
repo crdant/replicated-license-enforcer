@@ -30,14 +30,27 @@ jobs:
       with:
         go-version: '1.22'  # Specify the Go version
 
-    - name: Format Code
+    - name: Format 
       run: make fmt
 
-    - name: Vet Code
+    - name: Vet 
       run: make vet
 
-    - name: Run Tests
+    - name: Test 
       run: make test
+
+    - name: Scan
+      uses: aquasecurity/trivy-action@0.21.0
+      with:
+        scan-type: 'fs'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
 
     - name: Build
       run: make build
@@ -206,12 +219,33 @@ jobs:
           echo "image=$( echo '${{ steps.publish.outputs.digest }}' | cut -d'@' -f1)" >> "$GITHUB_OUTPUT"
           echo "digest=$( echo '${{ steps.publish.outputs.digest }}' | cut -d'@' -f2)" >> "$GITHUB_OUTPUT"
           
+  scan:
+    runs-on: ubuntu-22.04
+    needs:
+      - publish
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Scan image
+        uses: aquasecurity/trivy-action@0.21.0
+        with:
+          image-ref: ${{ needs.publish.outputs.ref }} 
+          format: 'sarif'          
+          output: 'trivy-results.sarif'
+
+      - name: Upload image scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
 
   sign:
     runs-on: ubuntu-22.04
     needs:
-      - package
       - publish
+      - scan
     permissions:
       contents: read
       packages: write
@@ -234,6 +268,7 @@ jobs:
         run: |
           cosign sign ${{ needs.publish.outputs.ref }} --yes
           echo "signature=$(cosign triangulate ${{ needs.publish.outputs.ref }})" >> $GITHUB_OUTPUT
+
 
   provenance: 
     # This job is responsible for generating the SLSA provenance for the image that was pushed to the registry.
