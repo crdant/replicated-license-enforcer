@@ -256,6 +256,6 @@ jobs:
       - name: Sign the image
         id: sign-image
         run: |
-          cosign sign ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.publish-image.outputs.digest }} --yes
-          echo "signature=$(cosign triangulate ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer@${{ needs.publish-image.outputs.digest }})" >> $GITHUB_OUTPUT
+          cosign sign ${{ needs.publish-image.outputs.digest }} --yes
+          echo "signature=$(cosign triangulate ${{ needs.publish-image.outputs.digest }})" >> $GITHUB_OUTPUT
 
