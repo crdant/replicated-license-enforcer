@@ -2,7 +2,7 @@ name: Build and sign image
 
 on:
   schedule:
-    cron: '18 11 * * *'
+    - cron: '18 11 * * *'
   push:
     paths-ignore:
       - LICENSE
