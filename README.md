@@ -140,7 +140,8 @@ enforcement code.
 #### `enforce` Package
 
 The main enforcement code is the package `enforce`. The `enforce` command is a
-simple CLI wrapper around that package, so you can 
+simple CLI wrapper around that package, so you can use the same logic in one
+of your own binaries. 
 
 To validate the license as your code starts up (just like the init container):
 
