@@ -168,7 +168,7 @@ jobs:
             type=schedule
             type=semver
             type=edge,branch=main
-            type=raw,${{ needs.build-package.outputs.version }}
+            type=raw,${{ needs.prepare-build.outputs.version }}
             type=ref,event=branch
             type=ref,event=tag
             type=ref,event=pr
