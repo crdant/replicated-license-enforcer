@@ -181,9 +181,16 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download public key and packages
-        id: download-package
+        id: download-artifacts
         uses: actions/download-artifact@v4
 
+      - name: Debug artifact download
+        id: debug
+        run: |
+          ls -l
+          ls -R keys packages 
+          find . -name "melange.rsa.*"
+          
       - name: Push enforcer image
         uses: chainguard-images/actions/apko-publish@main
         id: publish
