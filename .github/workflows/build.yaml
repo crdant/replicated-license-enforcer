@@ -78,7 +78,7 @@ jobs:
         id: update-package-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.package.version = "${{ needs.prepare-build.outputs.version }}"' ./deployment/melange.yaml
+          cmd: yq -i '.package.version = "${{ steps.version.outputs.version }}"' ./deployment/melange.yaml
 
       - name: Create cache directory
         id: cache-dir
