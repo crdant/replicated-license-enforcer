@@ -127,6 +127,7 @@ initContainers:
           apiVersion: v1
           fieldPath: metadata.uid
   imagePullPolicy: IfNotPresent
+  restartPolicy: Always
 ```
 
 The same caveats about using the image proxy and having appropriate RBAC
