@@ -1,0 +1,35 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: init-container-valid
+spec:
+  bindings:
+    - name: application
+      value: ($values.application)
+    - name: license
+      value: ($values.license)
+  steps:
+    - try:
+      - script:
+          content: |
+            helm install replicated oci://registry.replicated.com/library/replicated --namespace ${NAMESPACE} --version 1.0.0-beta.20 --set integration.licenseID=${LICENSE_ID}
+          timeout: 4m
+          env:
+            - name: NAMESPACE
+              value: $namespace
+            - name: LICENSE_ID
+              value: ($license)
+      - apply:
+          # file is relative to the test folder
+          file: init-container-scaffold.yaml
+      - assert:
+          # file is relative to the test folder
+          file: init-container-scaffold.yaml
+      - assert:
+          timeout: 10m
+          resource:
+            apiVersion: v1
+            kind: Event
+            type: Normal
+            reason: Valid
+

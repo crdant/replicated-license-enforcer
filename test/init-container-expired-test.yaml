@@ -1,0 +1,50 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: init-container-expired
+spec:
+  bindings:
+    - name: application
+      value: ($values.application)
+    - name: license
+      value: ($values.license)
+  steps:
+    - try:
+      - script:
+          content: |
+            # install the Replicated SDK for the license
+            helm install replicated oci://registry.replicated.com/library/replicated --namespace ${NAMESPACE} --version 1.0.0-beta.20 --set integration.licenseID=${LICENSE_ID} --wait
+          timeout: 4m
+          env:
+            - name: NAMESPACE
+              value: $namespace
+            - name: LICENSE_ID
+              value: ($license)
+      - script:
+          content: |
+            # expire the license, this has to come after the installation or the container won't start
+            function expire_license() {
+              past=$(date --utc --date='1 year ago' "+%Y-%m-%d")
+              app_id=$(replicated app ls --output json | jq -r --arg application ${REPLICATED_APP} '.[] | select(.app.slug == $application) | .app.id')
+              customer_id=$(replicated customer ls --output json | jq -r --arg installationId ${LICENSE_ID} '.[] | select(.installationId == $installationId) | .id')
+              updated_customer=$(replicated api get "/v3/app/${app_id}/customer/${customer_id}" | \
+                jq -c --arg appId "${app_id}" --arg expired ${past} '.customer | {"app_id": $appId, "name": .name, "email": .email, "channel_id": .channels[0].id, "expires_at": $expired, "type": .type, "is_airgap_enabled": .airgap, "is_gitops_supported": .isGitopsSupported, "is_identity_service_supported": .isIdentityServiceSupported, "is_geoaxis_supported": .isGeoaxisSupported, "is_snapshot_supported": .isSnapshotSupported, "is_support_bundle_upload_enabled": .isSupportBundleUploadEnabled, "entitlementValues":[]}')
+              replicated api put "/v3/customer/${customer_id}" --body "${updated_customer}"
+            }
+
+            expire_license
+          env:
+            - name: REPLICATED_APP
+              value: ($application)
+            - name: LICENSE_ID
+              value: ($license)
+      - apply:
+          file: init-container-scaffold.yaml
+      - assert:
+          file: init-container-scaffold.yaml
+      - assert:
+          resource:
+            apiVersion: v1
+            kind: Event
+            type: Warning
+            reason: Expired
