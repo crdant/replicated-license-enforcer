@@ -21,10 +21,10 @@ spec:
               value: ($license)
       - apply:
           # file is relative to the test folder
-          file: init-container-scaffold.yaml
+          file: scaffold.yaml
       - assert:
           # file is relative to the test folder
-          file: init-container-scaffold.yaml
+          file: scaffold.yaml
       - assert:
           timeout: 10m
           resource:

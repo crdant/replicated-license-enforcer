@@ -39,9 +39,9 @@ spec:
             - name: LICENSE_ID
               value: ($license)
       - apply:
-          file: sidecar-scaffold.yaml
+          file: scaffold.yaml
       - assert:
-          file: sidecar-scaffold.yaml
+          file: scaffold.yaml
       - assert:
           resource:
             apiVersion: v1

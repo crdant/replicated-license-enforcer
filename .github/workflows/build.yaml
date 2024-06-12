@@ -289,3 +289,215 @@ jobs:
       registry-username: ${{ github.actor }}
     secrets:
       registry-password: ${{ secrets.GITHUB_TOKEN }}
+
+  prepare:
+    runs-on: ubuntu-22.04
+    needs:
+      - provenance
+    outputs:
+      application-id: ${{ steps.application.outputs.id }}
+      versions: ${{ steps.versions.outputs.versions }}
+    steps:
+      - name: Install Replicated CLI
+        id: replicated
+        run: |
+          curl -s https://api.github.com/repos/replicatedhq/replicated/releases/latest \
+            | grep "browser_download_url.*linux_amd64.tar.gz" \
+            | cut -d : -f 2,3 \
+            | tr -d \" \
+            | wget -O replicated.tar.gz -qi -
+          tar xf replicated.tar.gz replicated && rm replicated.tar.gz
+          mv replicated /usr/local/bin/replicated
+
+      - name: Get available versions
+        id: versions
+        run: |
+          echo -n "versions=" >> $"$GITHUB_OUTPUT"
+          repliciated cluster versions --output json | \
+            jq '[.[] | select(.short_name != "kurl" and .short_name != "embedded-cluster") | .short_name as $dist | .versions[] | {distribution: $dist, version: .}]' \
+          >> "$GITHUB_OUTPUT"
+        env:
+          REPLICATED_API_TOKEN: ${{ secrets.REPLICATED_API_TOKEN }}
+
+  validate:
+    runs-on: ubuntu-22.04
+    needs:
+      - publish
+      - prepare
+      - provenance
+    strategy:
+      matrix:
+        cluster: ${{ fromJson(needs.prepare.outputs.versions) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: kyveryno/action-install-chainsaw@v0.1.0
+
+      - name: Install Replicated CLI
+        id: replicated
+        run: |
+          curl -s https://api.github.com/repos/replicatedhq/replicated/releases/latest \
+            | grep "browser_download_url.*linux_amd64.tar.gz" \
+            | cut -d : -f 2,3 \
+            | tr -d \" \
+            | wget -O replicated.tar.gz -qi -
+          tar xf replicated.tar.gz replicated && rm replicated.tar.gz
+          mv replicated /usr/local/bin/replicated
+
+      - name: Create test application
+        id: application
+        run: |
+          echo -n "slug=" >> "$GITHUB_OUTPUT"
+          replicated app create ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} --output json | jq -r .app.slug >> "$GITHUB_OUTPUT"
+        env:
+          REPLICATED_API_TOKEN: ${{ secrets.REPLICATED_API_TOKEN }}
+          
+     - name: Create Customer 
+        id: create-customer
+        uses: replicatedhq/replicated-actions/create-customer@v1
+        with:
+          app-slug: ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
+          api-token: ${{ secrets.REPLICATED_API_TOKEN }}
+          customer-name: ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
+          channel-slug: ${{ }}
+          customer-email: ${{ github.ref_name }}@example.com
+          expires-in: 14
+
+      - name: Create test cluster
+        id: create-cluster
+        uses: replicatedhq/replicated-actions/create-cluster@v1
+        with:
+          api-token: ${{ secrets.REPLICATED_TOKEN }}
+          kubernetes-distribution: ${{ matrix.cluster.distribution }}
+          kubernetes-version: ${{ matrix.cluster.version }}
+          ttl: 4h
+          cluster-name: enforcer-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}-${{ needs.publis.outputs.digest }}
+
+      - name: Prepare
+        id: prepare-test
+        run: |
+          for dir in $(find test -type d -mindepth 1) ; do
+            yq -i '.spec.template.spec.initContainers[0].image = ${{ needs.publish.outputs.image }}' ${dir}/scaffold.yaml
+          done
+          yq -n '.application = ${{ env.REPLICATED_APP }}, .license = ${{ steps.create-customer.outputs.license-id }}' > values.yaml
+          echo ${{ steps.create-cluster.outputs.kubeconfig }} > kubeconfig
+
+      - name: Test
+        id: test
+        run: |
+          export KUBECONFIG=$(pwd)/kubeconfig
+          chainsaw test ./test --values values.yaml 
+
+      - name: Remove Cluster
+        id: remove-cluster
+        uses: replicatedhq/replicated-actions/remove-cluster@v1
+        continue-on-error: true # It could be that the cluster is already removed
+        with:
+          api-token: ${{ secrets.REPLICATED_API_TOKEN }}
+          cluster-id: ${{ steps.create-cluster.outputs.cluster-id }}
+
+      - name: Archive Customer
+        id: archive-customer
+        if: always()
+        continue-on-error: true # It could be that the customer is already removed
+        uses: replicatedhq/replicated-actions/archive-customer@v1
+        with:
+          api-token: ${{ secrets.REPLICATED_API_TOKEN }}
+          customer-id:  ${{ steps.create-customer.outputs.customer-id }}
+
+      - name: Delete test application
+        id: application
+        if: always()
+        continue-on-error: true # It could be that the application is already removed
+        run: |
+          echo -n "id=" >> "$GITHUB_OUTPUT"
+          replicated app delete ${{ steps.create-application.outputs.slug }} --force
+        env:
+          REPLICATED_API_TOKEN: ${{ secrets.REPLICATED_API_TOKEN }}
+          
+
+  finalize:
+    runs-on: ubuntu-22.04
+    needs: 
+      - publish
+      - provenance
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+        tag: ${{fromJson(needs.finalize.outputs.tags)}}
+    outputs:
+      tags: ${{ steps.tags.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract metadata (tags, labels) for image image
+        id: tags
+        uses: docker/metadata-action@v5
+        with:
+          flavor: |
+            latest=auto
+          tags: |
+            type=sha
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}.{{minor}}.{{patch}}
+            type=edge,branch=main
+            type=ref,event=tag
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer
+
+      - name: Generate an array of tags from the metadata
+        id: tags
+        run: |
+          echo tags="$(echo '${{ steps.tags.outputs.json }}' | jq -c .tags)" >> "$GITHUB_OUTPUT"
+
+
+  publish:
+    runs-on: ubuntu-22.04
+    needs: 
+      - finalize
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      matrix: 
+        tag: ${{fromJson(needs.finalize.outputs.tags)}}
+    outputs:
+      ref: ${{ steps.publish.outputs.digest }}
+      image: ${{ steps.parse.outputs.image }}
+      digest: ${{ steps.parse.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download public key
+        id: download-keys
+        uses: actions/download-artifact@v4
+        with:
+          name: melange-public-key
+          path: ./keys
+
+      - name: Download packages
+        id: download-packages
+        uses: actions/download-artifact@v4
+        with:
+          name: packages
+          path: ./packages
+          
+      - name: Push enforcer image
+        uses: chainguard-images/actions/apko-publish@main
+        id: publish
+        with:
+          config: ./deployment/apko.yaml
+          tag: ${{ matrix.tag }}
+          archs: amd64,arm64
+          vcs-url: true
+          generic-user: ${{ github.actor }}
+          generic-pass: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Parse ref
+        id: parse
+        run: |
+          echo "image=$( echo '${{ steps.publish.outputs.digest }}' | cut -d'@' -f1)" >> "$GITHUB_OUTPUT"
+          echo "digest=$( echo '${{ steps.publish.outputs.digest }}' | cut -d'@' -f2)" >> "$GITHUB_OUTPUT"
