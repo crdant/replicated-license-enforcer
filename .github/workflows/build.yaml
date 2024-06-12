@@ -362,7 +362,6 @@ jobs:
           app-slug: ${{ steps.application.outputs.slug }}
           api-token: ${{ secrets.REPLICATED_API_TOKEN }}
           customer-name: ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
-          channel-slug: ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
           channel-slug: ${{ steps.application.outputs.channel }}
           customer-email: ${{ github.ref_name }}@example.com
           expires-in: 14
