@@ -435,7 +435,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Extract metadata (tags, labels) for image image
-        id: tags
+        id: meta
         uses: docker/metadata-action@v5
         with:
           flavor: |
