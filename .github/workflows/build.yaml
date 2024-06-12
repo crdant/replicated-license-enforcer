@@ -424,6 +424,7 @@ jobs:
     needs: 
       - publish
       - provenance
+      - validate
     permissions:
       contents: read
       packages: write
