@@ -347,8 +347,11 @@ jobs:
       - name: Create test application
         id: application
         run: |
-          echo -n "slug=" >> "$GITHUB_OUTPUT"
-          replicated app create ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} --output json | jq -r .app.slug >> "$GITHUB_OUTPUT"
+          replicated app create ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
+          slug=$(replicated app ls --output json | jq -r --arg application ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .app.slug')
+          channel=$(replicated app ls --output json | jq -r --arg application ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .channels[] | select(.name == "Stable") | .channelSlug')
+          echo -n "slug=${slug}" >> "$GITHUB_OUTPUT"
+          echo -n "channel=${channel}" >> "$GITHUB_OUTPUT"
         env:
           REPLICATED_API_TOKEN: ${{ secrets.REPLICATED_API_TOKEN }}
           
@@ -356,10 +359,11 @@ jobs:
         id: create-customer
         uses: replicatedhq/replicated-actions/create-customer@v1
         with:
-          app-slug: ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
+          app-slug: ${{ steps.application.outputs.slug }}
           api-token: ${{ secrets.REPLICATED_API_TOKEN }}
           customer-name: ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
-          channel-slug: ${{ }}
+          channel-slug: ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
+          channel-slug: ${{ steps.application.outputs.channel }}
           customer-email: ${{ github.ref_name }}@example.com
           expires-in: 14
 
