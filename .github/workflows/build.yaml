@@ -409,7 +409,7 @@ jobs:
           customer-id:  ${{ steps.create-customer.outputs.customer-id }}
 
       - name: Delete test application
-        id: application
+        id: remove-application
         if: always()
         continue-on-error: true # It could be that the application is already removed
         run: |
