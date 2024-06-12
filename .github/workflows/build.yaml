@@ -452,7 +452,7 @@ jobs:
           echo tags="$(echo '${{ steps.tags.outputs.json }}' | jq -c .tags)" >> "$GITHUB_OUTPUT"
 
 
-  publish:
+  release:
     runs-on: ubuntu-22.04
     needs: 
       - finalize
