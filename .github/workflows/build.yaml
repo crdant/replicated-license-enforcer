@@ -352,7 +352,7 @@ jobs:
         env:
           REPLICATED_API_TOKEN: ${{ secrets.REPLICATED_API_TOKEN }}
           
-     - name: Create Customer 
+      - name: Create Customer 
         id: create-customer
         uses: replicatedhq/replicated-actions/create-customer@v1
         with:
@@ -425,7 +425,6 @@ jobs:
       contents: read
       packages: write
       id-token: write
-        tag: ${{fromJson(needs.finalize.outputs.tags)}}
     outputs:
       tags: ${{ steps.tags.outputs.tags }}
     steps:
