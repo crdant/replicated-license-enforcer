@@ -354,11 +354,9 @@ jobs:
       - name: Create test application
         id: application
         run: |
-          set -x
           replicated app create ${{ needs.prepare.outputs.hash }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
           slug=$(replicated app ls --output json | jq -r --arg application ${{ needs.prepare.outputs.hash }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .app.slug')
           channel=$(replicated app ls --output json | jq -r --arg application ${{ needs.prepare.outputs.hash }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .channels[] | select(.name == "Stable") | .channelSlug')
-          echo "debug: slug=${slug}, channel=${channel}" 
           echo "slug=${slug}" >> "$GITHUB_OUTPUT"
           echo "channel=${channel}" >> "$GITHUB_OUTPUT"
         env:
@@ -379,7 +377,7 @@ jobs:
         id: create-cluster
         uses: replicatedhq/replicated-actions/create-cluster@v1
         with:
-          api-token: ${{ secrets.REPLICATED_TOKEN }}
+          api-token: ${{ secrets.REPLICATED_API_TOKEN }}
           kubernetes-distribution: ${{ matrix.cluster.distribution }}
           kubernetes-version: ${{ matrix.cluster.version }}
           ttl: 4h
