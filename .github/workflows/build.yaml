@@ -331,7 +331,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: kyveryno/action-install-chainsaw@v0.1.0
+      - uses: kyverno/action-install-chainsaw@v0.1.0
 
       - name: Install Replicated CLI
         id: replicated
