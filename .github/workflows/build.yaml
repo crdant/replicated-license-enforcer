@@ -347,9 +347,9 @@ jobs:
       - name: Create test application
         id: application
         run: |
-          replicated app create ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
-          slug=$(replicated app ls --output json | jq -r --arg application ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .app.slug')
-          channel=$(replicated app ls --output json | jq -r --arg application ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .channels[] | select(.name == "Stable") | .channelSlug')
+          replicated app create ${{ github.sha.slice(0,7) }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
+          slug=$(replicated app ls --output json | jq -r --arg application ${{ github.sha.slice(0,7) }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .app.slug')
+          channel=$(replicated app ls --output json | jq -r --arg application ${{ github.sha.slice(0,7) }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .channels[] | select(.name == "Stable") | .channelSlug')
           echo "slug=${slug}" >> "$GITHUB_OUTPUT"
           echo "channel=${channel}" >> "$GITHUB_OUTPUT"
         env:
@@ -361,9 +361,9 @@ jobs:
         with:
           app-slug: ${{ steps.application.outputs.slug }}
           api-token: ${{ secrets.REPLICATED_API_TOKEN }}
-          customer-name: ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
+          customer-name: ${{ github.sha.slice(0,7) }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
           channel-slug: ${{ steps.application.outputs.channel }}
-          customer-email: ${{ github.ref_name }}@example.com
+          customer-email: ${{ github.sha.slice(0,7) }}@example.com
           expires-in: 14
 
       - name: Create test cluster
@@ -413,7 +413,6 @@ jobs:
         if: always()
         continue-on-error: true # It could be that the application is already removed
         run: |
-          echo -n "id=" >> "$GITHUB_OUTPUT"
           replicated app delete ${{ steps.create-application.outputs.slug }} --force
         env:
           REPLICATED_API_TOKEN: ${{ secrets.REPLICATED_API_TOKEN }}
