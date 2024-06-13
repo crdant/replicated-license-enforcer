@@ -350,8 +350,8 @@ jobs:
           replicated app create ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
           slug=$(replicated app ls --output json | jq -r --arg application ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .app.slug')
           channel=$(replicated app ls --output json | jq -r --arg application ${{ github.ref_name }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .channels[] | select(.name == "Stable") | .channelSlug')
-          echo -n "slug=${slug}" >> "$GITHUB_OUTPUT"
-          echo -n "channel=${channel}" >> "$GITHUB_OUTPUT"
+          echo "slug=${slug}" >> "$GITHUB_OUTPUT"
+          echo "channel=${channel}" >> "$GITHUB_OUTPUT"
         env:
           REPLICATED_API_TOKEN: ${{ secrets.REPLICATED_API_TOKEN }}
           
