@@ -297,6 +297,7 @@ jobs:
     outputs:
       application-id: ${{ steps.application.outputs.id }}
       versions: ${{ steps.versions.outputs.versions }}
+      hash: ${{ steps.short-sha.outputs.hash }}
     steps:
       - name: Install Replicated CLI
         id: replicated
@@ -317,6 +318,12 @@ jobs:
           echo "versions=${versions}" >> "$GITHUB_OUTPUT"
         env:
           REPLICATED_API_TOKEN: ${{ secrets.REPLICATED_API_TOKEN }}
+
+      - name: Generate a Short SHA
+        id: short-sha
+        run: |
+          short_sha=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "hash=$(short_sha)" >> "$GITHUB_OUTPUT"
 
 
   validate:
@@ -347,9 +354,9 @@ jobs:
       - name: Create test application
         id: application
         run: |
-          replicated app create ${{ github.sha.slice(0,7) }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
-          slug=$(replicated app ls --output json | jq -r --arg application ${{ github.sha.slice(0,7) }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .app.slug')
-          channel=$(replicated app ls --output json | jq -r --arg application ${{ github.sha.slice(0,7) }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .channels[] | select(.name == "Stable") | .channelSlug')
+          replicated app create ${{ needs.prepare.outputs.hash }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
+          slug=$(replicated app ls --output json | jq -r --arg application ${{ needs.prepare.outputs.hash }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .app.slug')
+          channel=$(replicated app ls --output json | jq -r --arg application ${{ needs.prepare.outputs.hash }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .channels[] | select(.name == "Stable") | .channelSlug')
           echo "slug=${slug}" >> "$GITHUB_OUTPUT"
           echo "channel=${channel}" >> "$GITHUB_OUTPUT"
         env:
@@ -361,9 +368,9 @@ jobs:
         with:
           app-slug: ${{ steps.application.outputs.slug }}
           api-token: ${{ secrets.REPLICATED_API_TOKEN }}
-          customer-name: ${{ github.sha.slice(0,7) }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
+          customer-name: ${{ needs.prepare.outputs.hash }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
           channel-slug: ${{ steps.application.outputs.channel }}
-          customer-email: ${{ github.sha.slice(0,7) }}@example.com
+          customer-email: ${{ needs.prepare.outputs.hash }}@enforcer.test
           expires-in: 14
 
       - name: Create test cluster
