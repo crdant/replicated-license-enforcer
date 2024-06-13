@@ -323,7 +323,7 @@ jobs:
         id: short-sha
         run: |
           short_sha=$(echo "${{ github.sha }}" | cut -c1-7)
-          echo "hash=$(short_sha)" >> "$GITHUB_OUTPUT"
+          echo "hash=${short_sha}" >> "$GITHUB_OUTPUT"
 
 
   validate:
