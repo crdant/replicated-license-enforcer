@@ -354,9 +354,11 @@ jobs:
       - name: Create test application
         id: application
         run: |
+          set -x
           replicated app create ${{ needs.prepare.outputs.hash }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }}
           slug=$(replicated app ls --output json | jq -r --arg application ${{ needs.prepare.outputs.hash }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .app.slug')
           channel=$(replicated app ls --output json | jq -r --arg application ${{ needs.prepare.outputs.hash }}-${{ matrix.cluster.distribution }}-${{ matrix.cluster.version }} '.[] | select(.app.name == $application) | .channels[] | select(.name == "Stable") | .channelSlug')
+          echo "debug: slug=${slug}, channel=${channel}" 
           echo "slug=${slug}" >> "$GITHUB_OUTPUT"
           echo "channel=${channel}" >> "$GITHUB_OUTPUT"
         env:
