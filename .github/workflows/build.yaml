@@ -312,12 +312,12 @@ jobs:
       - name: Get available versions
         id: versions
         run: |
-          echo -n "versions=" >> $"$GITHUB_OUTPUT"
-          repliciated cluster versions --output json | \
-            jq '[.[] | select(.short_name != "kurl" and .short_name != "embedded-cluster") | .short_name as $dist | .versions[] | {distribution: $dist, version: .}]' \
-          >> "$GITHUB_OUTPUT"
+          versions=$(replicated cluster versions --output json | \
+            jq -c '[.[] | select(.short_name != "kurl" and .short_name != "embedded-cluster") | .short_name as $dist | .versions[] | {distribution: $dist, version: .}]')
+          echo "versions=${versions}" >> "$GITHUB_OUTPUT"
         env:
           REPLICATED_API_TOKEN: ${{ secrets.REPLICATED_API_TOKEN }}
+
 
   validate:
     runs-on: ubuntu-22.04
