@@ -313,6 +313,7 @@ jobs:
       - name: Get latest available versions
         id: versions
         run: |
+          set -x
           # the default behavior would be to use the latest version if I just specified
           # the distribution, but I want to make sure I have explicit versions in case 
           # I change up how I select what to test on in the future
