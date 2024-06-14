@@ -337,7 +337,7 @@ jobs:
                                              | ( . | del(.patch) | del(.extra) | join(".") ) + .extra
                                         )
                           }')
-          echo "versions=${versions}" >> "$GITHUB_OUTPUT"
+          echo "versions='${versions}'" >> "$GITHUB_OUTPUT"
         env:
           REPLICATED_API_TOKEN: ${{ secrets.REPLICATED_API_TOKEN }}
 
