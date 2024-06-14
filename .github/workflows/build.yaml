@@ -320,7 +320,7 @@ jobs:
           versions=$(replicated cluster versions --output json \
                     | jq -c '.[]  
                         | select(.short_name != "kurl" and .short_name != "embedded-cluster") 
-                        | { 
+                        | [ { 
                             "distribution": .short_name, 
                             "version": ( .versions 
                                             | map(
@@ -337,7 +337,7 @@ jobs:
                                              | last
                                              | ( . | del(.patch) | del(.extra) | join(".") ) + .extra
                                         )
-                          }')
+                          } ]')
           echo "versions='${versions}'" >> "$GITHUB_OUTPUT"
         env:
           REPLICATED_API_TOKEN: ${{ secrets.REPLICATED_API_TOKEN }}
