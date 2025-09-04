@@ -1,11 +1,20 @@
 # Replicated License Enforcer
 
+
 Implements a simple command that validates if a Replicated license is expired.
 Use it in an init container to prevent your application from starting after a
 license has expired, as a sidecar to monitor license expiration, or in your
 own code.
 
 [![Enforcing the Replicated License at Runtime](https://cdn.loom.com/sessions/thumbnails/81f608f80ca1493dbed01584d82fb5b9-with-play.gif)](https://www.loom.com/share/81f608f80ca1493dbed01584d82fb5b9)
+
+## ⚠️ Disclaimer
+
+**This is not an official Replicated product.** This tool is provided "AS IS"
+without any warranty or support from Replicated. While I work for Replicated
+and am happy to help, we can't offer support through our usual channels and I
+can't promise to meet any SLAs. Use at your own risk and ensure you understand
+the implications of managing team access control through this tool.
 
 ## Background
 
@@ -54,7 +63,7 @@ Add the following code to your manifest:
 ```
 initContainers:
 - name: license-check
-  image: ghcr.io/crdant/replicated-license-enforcer:latest
+  image: ghcr.io/crdant/license-enforcer:latest
   env:
     - name: REPLICATED_SDK_ENDPOINT
       value: http://replicated:3000
