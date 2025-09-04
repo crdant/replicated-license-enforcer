@@ -141,7 +141,7 @@ jobs:
     needs: 
       - package
     permissions:
-        contents: read
+      contents: read
       packages: write
       id-token: write
     outputs:
