@@ -1,6 +1,6 @@
 package:
   name: replicated-license-enforcer
-  version: ${GIT_TAG}
+  version: "${GIT_TAG}"
   epoch: 0
   description: replicated licensee enforcement package
   copyright:
