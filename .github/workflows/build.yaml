@@ -168,7 +168,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=tag
             type=ref,event=pr
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/replicated-license-enforcer
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/license-enforcer
 
       - name: Generate an array of tags from the metadata
         id: tags
