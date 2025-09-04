@@ -79,8 +79,11 @@ jobs:
         id: version
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]] ; then
-            TAG=${{ github.ref_name }}
-            echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+            local tag=${{ github.ref_name }}
+            local version=${tag#v}
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+            local melange_version=$(echo "$version" | sed -E 's/-([a-z]+)\.([0-9]+)/_\1\2/g')
+            echo "melange_version=${melange_version}" >> "$GITHUB_OUTPUT"
           else
             echo "version=build.${{ github.run_id }}" >> "$GITHUB_OUTPUT"
           fi
@@ -117,7 +120,7 @@ jobs:
           signing-key-path: ./keys/melange.rsa
           cache-dir: ${{ steps.cache.outputs.cache_dir }}
         env:
-          GIT_TAG: ${{ steps.version.outputs.version }}
+          GIT_TAG: ${{ steps.version.outputs.melange_version }}
 
       - name: Upload public key
         id: upload-key
@@ -138,7 +141,7 @@ jobs:
     needs: 
       - package
     permissions:
-      contents: read
+        contents: read
       packages: write
       id-token: write
     outputs:
