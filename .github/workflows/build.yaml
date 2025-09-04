@@ -79,7 +79,8 @@ jobs:
         id: version
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]] ; then
-            echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            TAG=${{ github.ref_name }}
+            echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
           else
             echo "version=build.${{ github.run_id }}" >> "$GITHUB_OUTPUT"
           fi
@@ -115,6 +116,8 @@ jobs:
           sign-with-key: true
           signing-key-path: ./keys/melange.rsa
           cache-dir: ${{ steps.cache.outputs.cache_dir }}
+        env:
+          GIT_TAG: ${{ steps.version.outputs.version }}
 
       - name: Upload public key
         id: upload-key
