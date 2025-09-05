@@ -106,6 +106,10 @@ jobs:
         with:
           cmd: yq -i '.package.version = "${{ steps.version.outputs.melange_version }}"' ./deployment/melange.yaml
 
+      - name: Debug output of melang YAML
+        run: |
+          cat ./deployment/melange.yaml
+
       - name: Create cache directory
         id: cache-dir
         shell: bash
