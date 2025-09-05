@@ -79,10 +79,10 @@ jobs:
         id: version
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]] ; then
-            local tag=${{ github.ref_name }}
-            local version=${tag#v}
+            tag=${{ github.ref_name }}
+            version=${tag#v}
             echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-            local melange_version=$(echo "$version" | sed -E 's/-([a-z]+)\.([0-9]+)/_\1\2/g')
+            melange_version=$(echo "$version" | sed -E 's/-([a-z]+)\.([0-9]+)/_\1\2/g')
             echo "melange_version=${melange_version}" >> "$GITHUB_OUTPUT"
           else
             echo "version=build.${{ github.run_id }}" >> "$GITHUB_OUTPUT"
