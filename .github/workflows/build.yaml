@@ -86,6 +86,7 @@ jobs:
             echo "melange_version=${melange_version}" >> "$GITHUB_OUTPUT"
           else
             echo "version=build.${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+            echo "melange_version=${{ github.run_id }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Prepare key directory
@@ -103,7 +104,7 @@ jobs:
         id: update-package-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.package.version = "${{ steps.version.outputs.version }}"' ./deployment/melange.yaml
+          cmd: yq -i '.package.version = "${{ steps.version.outputs.melange_version }}"' ./deployment/melange.yaml
 
       - name: Create cache directory
         id: cache-dir
