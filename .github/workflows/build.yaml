@@ -51,7 +51,7 @@ jobs:
         output: 'trivy-results.sarif'
 
     - name: Upload scan results
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
@@ -79,9 +79,14 @@ jobs:
         id: version
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]] ; then
-            echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            tag=${{ github.ref_name }}
+            version=${tag#v}
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+            melange_version=$(echo "$version" | sed -E 's/-([a-z]+)\.([0-9]+)/_\1\2/g')
+            echo "melange_version=${melange_version}" >> "$GITHUB_OUTPUT"
           else
             echo "version=build.${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+            echo "melange_version=${{ github.run_id }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Prepare key directory
@@ -99,7 +104,7 @@ jobs:
         id: update-package-version
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.package.version = "${{ steps.version.outputs.version }}"' ./deployment/melange.yaml
+          cmd: yq -i '.package.version = "${{ steps.version.outputs.melange_version }}"' ./deployment/melange.yaml
 
       - name: Create cache directory
         id: cache-dir
@@ -115,6 +120,8 @@ jobs:
           sign-with-key: true
           signing-key-path: ./keys/melange.rsa
           cache-dir: ${{ steps.cache.outputs.cache_dir }}
+        env:
+          GIT_TAG: ${{ steps.version.outputs.melange_version }}
 
       - name: Upload public key
         id: upload-key
